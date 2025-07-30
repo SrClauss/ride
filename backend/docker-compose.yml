@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - /app/__pycache__
+    environment:
+      - DEBUG=true
+      - DATABASE_URL=sqlite:///./rider_finance.db
+    env_file:
+      - .env
+    restart: unless-stopped
+    
+  # PostgreSQL para produção (opcional)
+  # db:
+  #   image: postgres:15
+  #   environment:
+  #     POSTGRES_DB: rider_finance
+  #     POSTGRES_USER: rider_user
+  #     POSTGRES_PASSWORD: rider_pass
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+
+  # Redis para cache (opcional)
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "6379:6379"
+
+# volumes:
+#   postgres_data:

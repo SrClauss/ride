@@ -1,0 +1,46 @@
+# FastAPI and related packages
+fastapi[standard]==0.104.1
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+
+# Database
+sqlalchemy==2.0.23
+
+# Authentication and security
+PyJWT==2.8.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.0.1
+python-multipart==0.0.6
+
+# HTTP client for Asaas API
+httpx==0.25.2
+
+# CORS and middleware
+fastapi-cors==0.0.6
+
+# Utilities
+python-dotenv==1.0.0
+ulid-py==1.1.0
+
+# Email (optional)
+pydantic[email]==2.5.0
+
+# Development and testing
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.11.0
+isort==5.12.0
+watchfiles==0.21.0
+
+# Production
+gunicorn==21.2.0
+
+# Monitoring and logging
+structlog==23.2.0
+
+# Rate limiting
+slowapi==0.1.9
+
+# Database migrations (optional)
+alembic==1.13.0
