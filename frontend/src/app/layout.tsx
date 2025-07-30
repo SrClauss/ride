@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AppProvider } from "../store/context";
 import { ThemeProvider } from "../components/theme/ThemeProvider";
 import MainLayout from "../components/layout/MainLayout";
+import { NoSSR } from "../components/common/NoSSR";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -16,14 +17,32 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body>
-        <AppProvider>
-          <ThemeProvider>
-            <MainLayout>
-              {children}
-            </MainLayout>
-          </ThemeProvider>
-        </AppProvider>
+      <body suppressHydrationWarning={true}>
+        <NoSSR
+          fallback={
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              height: '100vh',
+              backgroundColor: '#121212',
+              color: '#ffffff'
+            }}>
+              <div style={{ textAlign: 'center' }}>
+                <h2>Rider Finance</h2>
+                <p>Carregando...</p>
+              </div>
+            </div>
+          }
+        >
+          <AppProvider>
+            <ThemeProvider>
+              <MainLayout>
+                {children}
+              </MainLayout>
+            </ThemeProvider>
+          </AppProvider>
+        </NoSSR>
       </body>
     </html>
   );

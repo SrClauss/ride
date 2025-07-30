@@ -1,6 +1,6 @@
 'use client'
 
-import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useReducer, useEffect, useMemo, useCallback, ReactNode } from 'react'
 import { AppState, AppAction, User } from '../types'
 import { appReducer, initialState, actionCreators } from './reducer'
 
@@ -18,6 +18,9 @@ interface AppContextType {
 // Criar o context
 const AppContext = createContext<AppContextType | undefined>(undefined)
 
+// Exportar o context para testes
+export { AppContext }
+
 // Provider component
 interface AppProviderProps {
   children: ReactNode
@@ -26,22 +29,8 @@ interface AppProviderProps {
 export function AppProvider({ children }: AppProviderProps) {
   const [state, dispatch] = useReducer(appReducer, initialState)
 
-  // Verificar autenticação no carregamento
-  useEffect(() => {
-    checkAuthStatus()
-  }, [])
-
-  // Persistir tema no localStorage
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('theme', state.theme)
-      // Aplicar tema no document
-      document.documentElement.setAttribute('data-theme', state.theme)
-    }
-  }, [state.theme])
-
   // Função de login
-  const login = (token: string, userData: User) => {
+  const login = useCallback((token: string, userData: User) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('authToken', token)
       localStorage.setItem('userData', JSON.stringify(userData))
@@ -58,10 +47,10 @@ export function AppProvider({ children }: AppProviderProps) {
                         userData.planStatus === 'active'
     
     dispatch(actionCreators.setPaidStatus(isSubscribed))
-  }
+  }, [dispatch])
 
   // Função de logout
-  const logout = () => {
+  const logout = useCallback(() => {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('authToken')
       localStorage.removeItem('userData')
@@ -70,10 +59,10 @@ export function AppProvider({ children }: AppProviderProps) {
     }
     
     dispatch(actionCreators.logout())
-  }
+  }, [dispatch])
 
   // Verificar status de autenticação
-  const checkAuthStatus = () => {
+  const checkAuthStatus = useCallback(() => {
     if (typeof window === 'undefined') return
 
     dispatch(actionCreators.setLoading('auth', true))
@@ -110,30 +99,47 @@ export function AppProvider({ children }: AppProviderProps) {
     } finally {
       dispatch(actionCreators.setLoading('auth', false))
     }
-  }
+  }, [dispatch])
+
+  // Inicializar auth na primeira renderização
+  useEffect(() => {
+    checkAuthStatus()
+  }, [checkAuthStatus])
+
+  // Persistir tema no localStorage
+  useEffect(() => {
+    if (typeof window !== 'undefined' && state.theme) {
+      localStorage.setItem('theme', state.theme)
+      // Aplicar tema no document apenas no cliente
+      if (document) {
+        document.documentElement.setAttribute('data-theme', state.theme)
+      }
+    }
+  }, [state.theme])
 
   // Carregar tema do localStorage
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null
-      if (savedTheme) {
+      if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark')) {
         dispatch(actionCreators.setTheme(savedTheme))
       } else {
         // Detectar preferência do sistema
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-        dispatch(actionCreators.setTheme(prefersDark ? 'dark' : 'light'))
+        const defaultTheme = prefersDark ? 'dark' : 'light'
+        dispatch(actionCreators.setTheme(defaultTheme))
       }
     }
   }, [])
 
-  const contextValue: AppContextType = {
+  const contextValue: AppContextType = useMemo(() => ({
     state,
     dispatch,
     actions: actionCreators,
     login,
     logout,
     checkAuthStatus,
-  }
+  }), [state, login, logout, checkAuthStatus])
 
   return (
     <AppContext.Provider value={contextValue}>

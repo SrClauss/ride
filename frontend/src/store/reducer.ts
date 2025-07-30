@@ -36,7 +36,7 @@ export const initialState: AppState = {
   errors: initialErrorState,
   
   // Configurações
-  theme: 'light',
+  theme: 'dark',
   sidebarOpen: false,
 }
 

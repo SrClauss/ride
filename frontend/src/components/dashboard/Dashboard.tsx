@@ -3,7 +3,6 @@
 import React from 'react'
 import {
   Box,
-  Grid2 as Grid,
   Card,
   CardContent,
   Typography,
@@ -87,7 +86,16 @@ export default function Dashboard() {
   const [isWorkSessionActive, setIsWorkSessionActive] = React.useState(false)
   const [sessionDuration, setSessionDuration] = React.useState(0)
 
-  const data = mockDashboardData
+  // Usar dados reais do usuário ou dados mock como fallback
+  const data = React.useMemo(() => {
+    // TODO: Integrar com API para buscar dados reais do usuário
+    // Por enquanto, personalizar dados mock com nome do usuário
+    return {
+      ...mockDashboardData,
+      userName: user?.fullName || user?.username || 'Usuário',
+      userEmail: user?.email || 'usuario@exemplo.com'
+    }
+  }, [user])
 
   // Calcular progresso das metas
   const dailyProgress = (data.today.income / data.goals.dailyTarget) * 100
@@ -140,11 +148,22 @@ export default function Dashboard() {
   ]
 
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ 
+      p: { xs: 1, sm: 2, md: 3 },
+      maxWidth: '100%',
+      overflow: 'hidden'
+    }}>
       {/* Welcome Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" fontWeight={700} gutterBottom>
-          Bem-vindo de volta, {user?.fullName?.split(' ')[0] || user?.username}!
+      <Box sx={{ mb: { xs: 2, md: 4 } }}>
+        <Typography 
+          variant="h4" 
+          fontWeight={700} 
+          gutterBottom
+          sx={{ 
+            fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' }
+          }}
+        >
+          Bem-vindo de volta, {data.userName?.split(' ')[0] || 'Usuário'}!
         </Typography>
         <Typography variant="body1" color="text.secondary">
           Acompanhe seus ganhos em tempo real e gerencie sua jornada
@@ -152,65 +171,95 @@ export default function Dashboard() {
       </Box>
 
       {/* Quick Stats */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
+      <Box 
+        sx={{ 
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: '1fr',
+            sm: 'repeat(2, 1fr)',
+            md: 'repeat(3, 1fr)',
+            lg: 'repeat(4, 1fr)'
+          },
+          gap: { xs: 2, md: 3 },
+          mb: { xs: 3, md: 4 }
+        }}
+      >
         {stats.map((stat) => {
           const Icon = stat.icon
           return (
-            <Grid xs={12} sm={6} md={3} key={stat.label}>
-              <Card
-                sx={{
-                  height: '100%',
-                  backgroundColor: 'background.paper',
-                  border: '1px solid',
-                  borderColor: 'divider',
-                  '&:hover': {
-                    boxShadow: 2,
-                    transform: 'translateY(-2px)',
-                  },
-                  transition: 'all 0.2s ease-in-out',
-                }}
-              >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                    <Avatar
-                      sx={{
-                        backgroundColor: stat.bgColor,
-                        color: stat.color,
-                        width: 48,
-                        height: 48,
-                        mr: 2,
-                      }}
-                    >
-                      <Icon />
-                    </Avatar>
-                    <Box sx={{ flexGrow: 1 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        {stat.label}
-                      </Typography>
-                      <Typography variant="h6" fontWeight={600}>
-                        {stat.value}
-                      </Typography>
-                    </Box>
-                  </Box>
-                  <Chip
-                    label={stat.trend}
-                    size="small"
+            <Card
+              key={stat.label}
+              sx={{
+                height: '100%',
+                backgroundColor: 'background.paper',
+                border: '1px solid',
+                borderColor: 'divider',
+                '&:hover': {
+                  boxShadow: 2,
+                  transform: 'translateY(-2px)',
+                },
+                transition: 'all 0.2s ease-in-out',
+              }}
+            >
+              <CardContent sx={{ p: { xs: 2, md: 3 } }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Avatar
                     sx={{
-                      backgroundColor: stat.trendUp ? 'success.light' : 'error.light',
-                      color: stat.trendUp ? 'success.dark' : 'error.dark',
-                      fontWeight: 600,
+                      backgroundColor: stat.bgColor,
+                      color: stat.color,
+                      width: { xs: 40, md: 48 },
+                      height: { xs: 40, md: 48 },
+                      mr: 2,
                     }}
-                  />
-                </CardContent>
-              </Card>
-            </Grid>
+                  >
+                    <Icon />
+                  </Avatar>
+                  <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                    <Typography 
+                      variant="body2" 
+                      color="text.secondary"
+                      sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}
+                    >
+                      {stat.label}
+                    </Typography>
+                    <Typography 
+                      variant="h6" 
+                      fontWeight={600}
+                      sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}
+                    >
+                      {stat.value}
+                    </Typography>
+                  </Box>
+                </Box>
+                <Chip
+                  label={stat.trend}
+                  size="small"
+                  sx={{
+                    backgroundColor: stat.trendUp ? 'success.light' : 'error.light',
+                    color: stat.trendUp ? 'success.dark' : 'error.dark',
+                    fontWeight: 600,
+                    fontSize: { xs: '0.75rem', md: '0.875rem' }
+                  }}
+                />
+              </CardContent>
+            </Card>
           )
         })}
-      </Grid>
+      </Box>
 
-      <Grid container spacing={3}>
+      <Box 
+        sx={{ 
+          display: 'grid',
+          gridTemplateColumns: {
+            xs: '1fr',
+            md: '1fr 2fr'
+          },
+          gap: { xs: 2, md: 3 },
+          mb: { xs: 3, md: 4 }
+        }}
+      >
         {/* Session Control */}
-        <Grid xs={12} md={4}>
+        <Box>
           <Card
             sx={{
               height: '100%',
@@ -262,13 +311,15 @@ export default function Dashboard() {
               </Button>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
 
         {/* Goals Progress */}
-        <Grid xs={12} md={8}>
+        <Box>
+        {/* Goals Progress */}
+        <Box>
           <Card sx={{ height: '100%' }}>
             <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'between', alignItems: 'center', mb: 3 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" fontWeight={600}>
                   Progresso das Metas
                 </Typography>
@@ -277,32 +328,71 @@ export default function Dashboard() {
                 </IconButton>
               </Box>
 
-              <Grid container spacing={3}>
+              <Box 
+                sx={{ 
+                  display: 'grid',
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'repeat(2, 1fr)'
+                  },
+                  gap: { xs: 2, sm: 3 }
+                }}
+              >
                 {/* Daily Goal */}
-                <Grid xs={12} md={6}>
+                <Box>
                   <Box
                     sx={{
-                      p: 2,
-                      backgroundColor: 'success.light',
+                      p: { xs: 1.5, sm: 2 },
+                      backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1a2e1a' : '#f0f9f0',
                       borderRadius: 2,
                       border: '1px solid',
-                      borderColor: 'success.main',
+                      borderColor: (theme) => theme.palette.mode === 'dark' ? '#2e7d32' : '#4caf50',
                     }}
                   >
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="body2" color="success.dark" fontWeight={600}>
+                      <Typography 
+                        variant="body2" 
+                        fontWeight={600}
+                        sx={{
+                          color: (theme) => theme.palette.mode === 'dark' ? '#81c784' : '#2e7d32'
+                        }}
+                      >
                         Meta Diária
                       </Typography>
-                      <Typography variant="body2" color="success.dark" fontWeight={600}>
+                      <Typography 
+                        variant="body2" 
+                        fontWeight={600}
+                        sx={{
+                          color: (theme) => theme.palette.mode === 'dark' ? '#81c784' : '#2e7d32'
+                        }}
+                      >
                         {Math.round(dailyProgress)}%
                       </Typography>
                     </Box>
                     
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                      <Typography variant="h6" color="success.dark">
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      mb: 2,
+                      flexWrap: { xs: 'wrap', sm: 'nowrap' },
+                      gap: { xs: 1, sm: 0 }
+                    }}>
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontSize: { xs: '1rem', sm: '1.25rem' },
+                          color: (theme) => theme.palette.mode === 'dark' ? '#c8e6c9' : '#1b5e20'
+                        }}
+                      >
                         {formatCurrency(data.today.income)}
                       </Typography>
-                      <Typography variant="h6" color="success.dark">
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontSize: { xs: '1rem', sm: '1.25rem' },
+                          color: (theme) => theme.palette.mode === 'dark' ? '#c8e6c9' : '#1b5e20'
+                        }}
+                      >
                         {formatCurrency(data.goals.dailyTarget)}
                       </Typography>
                     </Box>
@@ -313,40 +403,70 @@ export default function Dashboard() {
                       sx={{
                         height: 8,
                         borderRadius: 4,
-                        backgroundColor: 'success.lighter',
+                        backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#2e4e2e' : '#e8f5e8',
                         '& .MuiLinearProgress-bar': {
-                          backgroundColor: 'success.main',
+                          backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
                         },
                       }}
                     />
                   </Box>
-                </Grid>
+                </Box>
 
                 {/* Weekly Goal */}
-                <Grid xs={12} md={6}>
+                <Box>
                   <Box
                     sx={{
-                      p: 2,
-                      backgroundColor: 'primary.light',
+                      p: { xs: 1.5, sm: 2 },
+                      backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1a237e' : '#e3f2fd',
                       borderRadius: 2,
                       border: '1px solid',
-                      borderColor: 'primary.main',
+                      borderColor: (theme) => theme.palette.mode === 'dark' ? '#3f51b5' : '#1976d2',
                     }}
                   >
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography variant="body2" color="primary.dark" fontWeight={600}>
+                      <Typography 
+                        variant="body2" 
+                        fontWeight={600}
+                        sx={{
+                          color: (theme) => theme.palette.mode === 'dark' ? '#9fa8da' : '#1565c0'
+                        }}
+                      >
                         Meta Semanal
                       </Typography>
-                      <Typography variant="body2" color="primary.dark" fontWeight={600}>
+                      <Typography 
+                        variant="body2" 
+                        fontWeight={600}
+                        sx={{
+                          color: (theme) => theme.palette.mode === 'dark' ? '#9fa8da' : '#1565c0'
+                        }}
+                      >
                         {Math.round(weeklyProgress)}%
                       </Typography>
                     </Box>
                     
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                      <Typography variant="h6" color="primary.dark">
+                    <Box sx={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      mb: 2,
+                      flexWrap: { xs: 'wrap', sm: 'nowrap' },
+                      gap: { xs: 1, sm: 0 }
+                    }}>
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontSize: { xs: '1rem', sm: '1.25rem' },
+                          color: (theme) => theme.palette.mode === 'dark' ? '#c5cae9' : '#0d47a1'
+                        }}
+                      >
                         {formatCurrency(data.thisWeek.income)}
                       </Typography>
-                      <Typography variant="h6" color="primary.dark">
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontSize: { xs: '1rem', sm: '1.25rem' },
+                          color: (theme) => theme.palette.mode === 'dark' ? '#c5cae9' : '#0d47a1'
+                        }}
+                      >
                         {formatCurrency(data.goals.weeklyTarget)}
                       </Typography>
                     </Box>
@@ -357,22 +477,23 @@ export default function Dashboard() {
                       sx={{
                         height: 8,
                         borderRadius: 4,
-                        backgroundColor: 'primary.lighter',
+                        backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#283593' : '#e1f5fe',
                         '& .MuiLinearProgress-bar': {
-                          backgroundColor: 'primary.main',
+                          backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#3f51b5' : '#1976d2',
                         },
                       }}
                     />
                   </Box>
-                </Grid>
-              </Grid>
+                </Box>
+              </Box>
             </CardContent>
           </Card>
-        </Grid>
+        </Box>
+      </Box>
 
-        {/* Recent Transactions */}
-        <Grid xs={12}>
-          <Card>
+      {/* Recent Transactions */}
+      <Box>
+        <Card>
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" fontWeight={600}>
@@ -411,7 +532,7 @@ export default function Dashboard() {
                 </Box>
               ) : (
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {data.recentTransactions.map((transaction, index) => (
+                  {data.recentTransactions.map((transaction: any, index: number) => (
                     <Box key={transaction.id}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Avatar
@@ -451,8 +572,8 @@ export default function Dashboard() {
               )}
             </CardContent>
           </Card>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
     </Box>
   )
 }

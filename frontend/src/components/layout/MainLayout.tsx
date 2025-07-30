@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Box, CssBaseline, Toolbar } from '@mui/material'
+import { Box, CssBaseline, Toolbar, useMediaQuery, useTheme } from '@mui/material'
 import { useApp } from '../../store/context'
 import Header from './Header'
 import Sidebar from './Sidebar'
@@ -12,14 +12,18 @@ interface MainLayoutProps {
 }
 
 const drawerWidth = 280
+const mobileDrawerWidth = 72
 
 export default function MainLayout({ children }: MainLayoutProps) {
   const { state } = useApp()
   const { sidebarOpen } = state
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+  const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'))
 
   return (
     <AuthGuard>
-      <Box sx={{ display: 'flex' }}>
+      <Box sx={{ display: 'flex', minHeight: '100vh' }}>
         <CssBaseline />
         
         {/* Header */}
@@ -35,16 +39,34 @@ export default function MainLayout({ children }: MainLayoutProps) {
             flexGrow: 1,
             backgroundColor: 'background.default',
             minHeight: '100vh',
-            transition: (theme) =>
-              theme.transitions.create('margin', {
-                easing: theme.transitions.easing.sharp,
-                duration: theme.transitions.duration.leavingScreen,
-              }),
-            marginLeft: sidebarOpen ? 0 : `-${drawerWidth - 72}px`,
+            width: isMobile ? '100%' : 'auto',
+            transition: theme.transitions.create(['margin', 'width'], {
+              easing: theme.transitions.easing.sharp,
+              duration: theme.transitions.duration.leavingScreen,
+            }),
+            marginLeft: isMobile 
+              ? 0 
+              : sidebarOpen 
+                ? `${drawerWidth}px`
+                : `${mobileDrawerWidth}px`,
+            // Garantir que o conteúdo não seja sobreposto
+            [theme.breakpoints.down('md')]: {
+              marginLeft: 0,
+              width: '100%',
+            },
+            [theme.breakpoints.up('md')]: {
+              marginLeft: sidebarOpen ? `${drawerWidth}px` : `${mobileDrawerWidth}px`,
+            },
           }}
         >
           <Toolbar />
-          {children}
+          <Box sx={{ 
+            p: isMobile ? 1 : 3,
+            maxWidth: '100%',
+            overflow: 'hidden'
+          }}>
+            {children}
+          </Box>
         </Box>
       </Box>
     </AuthGuard>

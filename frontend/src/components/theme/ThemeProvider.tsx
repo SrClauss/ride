@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useMemo } from 'react'
 import { ThemeProvider as MuiThemeProvider, CssBaseline } from '@mui/material'
 import { useTheme } from '../../store/context'
 import { darkTheme, lightTheme } from '../../theme/uber-theme'
@@ -11,7 +11,10 @@ interface ThemeProviderProps {
 
 export function ThemeProvider({ children }: ThemeProviderProps) {
   const { theme } = useTheme()
-  const muiTheme = theme === 'dark' ? darkTheme : lightTheme
+  
+  const muiTheme = useMemo(() => {
+    return theme === 'dark' ? darkTheme : lightTheme
+  }, [theme])
 
   return (
     <MuiThemeProvider theme={muiTheme}>

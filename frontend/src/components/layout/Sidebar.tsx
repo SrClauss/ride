@@ -13,6 +13,8 @@ import {
   Typography,
   Box,
   Avatar,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material'
 import {
   Dashboard as DashboardIcon,
@@ -36,101 +38,18 @@ const menuItems = [
 ]
 
 const drawerWidth = 280
+const mobileDrawerWidth = 72
 
-export default function Sidebar() {
-  const { state, dispatch, actions } = useApp()
-  const { sidebarOpen, user } = state
-
-  const handleDrawerClose = () => {
-    dispatch(actions.setSidebar(false))
-  }
-
-  const handleLogout = () => {
-    dispatch(actions.logout())
-  }
-
+// Componente para o conteúdo do sidebar (reutilizado em mobile e desktop)
+function SidebarContent({ user, handleLogout, isOpen }: { 
+  user: any; 
+  handleLogout: () => void; 
+  isOpen: boolean 
+}) {
   return (
-    <Drawer
-      variant="permanent"
-      open={sidebarOpen}
-      sx={{
-        width: sidebarOpen ? drawerWidth : 72,
-        flexShrink: 0,
-        whiteSpace: 'nowrap',
-        boxSizing: 'border-box',
-        '& .MuiDrawer-paper': {
-          width: sidebarOpen ? drawerWidth : 72,
-          overflowX: 'hidden',
-          backgroundColor: 'background.paper',
-          borderRight: '1px solid',
-          borderColor: 'divider',
-          transition: (theme) =>
-            theme.transitions.create('width', {
-              easing: theme.transitions.easing.sharp,
-              duration: theme.transitions.duration.enteringScreen,
-            }),
-        },
-      }}
-    >
-      {/* Header */}
-      <Box
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: sidebarOpen ? 'space-between' : 'center',
-          px: sidebarOpen ? 2 : 1,
-          py: 2,
-          minHeight: 64,
-        }}
-      >
-        {sidebarOpen && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Avatar
-              sx={{
-                width: 32,
-                height: 32,
-                bgcolor: 'primary.main',
-                fontSize: '1rem',
-              }}
-            >
-              RF
-            </Avatar>
-            <Typography variant="h6" noWrap component="div" fontWeight={600}>
-              Rider Finance
-            </Typography>
-          </Box>
-        )}
-        {!sidebarOpen && (
-          <Avatar
-            sx={{
-              width: 40,
-              height: 40,
-              bgcolor: 'primary.main',
-              fontSize: '1.2rem',
-            }}
-          >
-            RF
-          </Avatar>
-        )}
-        {sidebarOpen && (
-          <IconButton
-            onClick={handleDrawerClose}
-            sx={{
-              color: 'text.secondary',
-              '&:hover': {
-                backgroundColor: 'action.hover',
-              },
-            }}
-          >
-            <ChevronLeft />
-          </IconButton>
-        )}
-      </Box>
-
-      <Divider />
-
+    <>
       {/* User Info */}
-      {sidebarOpen && user && (
+      {isOpen && user && (
         <Box sx={{ px: 2, py: 2 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
             <Avatar
@@ -191,7 +110,7 @@ export default function Sidebar() {
               <ListItemButton
                 sx={{
                   minHeight: 48,
-                  justifyContent: sidebarOpen ? 'initial' : 'center',
+                  justifyContent: isOpen ? 'initial' : 'center',
                   px: 2.5,
                   borderRadius: 1,
                   mb: 0.5,
@@ -203,7 +122,7 @@ export default function Sidebar() {
                 <ListItemIcon
                   sx={{
                     minWidth: 0,
-                    mr: sidebarOpen ? 3 : 'auto',
+                    mr: isOpen ? 3 : 'auto',
                     justifyContent: 'center',
                     color: 'text.primary',
                   }}
@@ -213,7 +132,7 @@ export default function Sidebar() {
                 <ListItemText
                   primary={item.text}
                   sx={{
-                    opacity: sidebarOpen ? 1 : 0,
+                    opacity: isOpen ? 1 : 0,
                     '& .MuiListItemText-primary': {
                       fontSize: '0.875rem',
                       fontWeight: 500,
@@ -234,7 +153,7 @@ export default function Sidebar() {
           onClick={handleLogout}
           sx={{
             minHeight: 48,
-            justifyContent: sidebarOpen ? 'initial' : 'center',
+            justifyContent: isOpen ? 'initial' : 'center',
             px: 2.5,
             borderRadius: 1,
             color: 'error.main',
@@ -247,7 +166,7 @@ export default function Sidebar() {
           <ListItemIcon
             sx={{
               minWidth: 0,
-              mr: sidebarOpen ? 3 : 'auto',
+              mr: isOpen ? 3 : 'auto',
               justifyContent: 'center',
               color: 'inherit',
             }}
@@ -257,7 +176,7 @@ export default function Sidebar() {
           <ListItemText
             primary="Sair"
             sx={{
-              opacity: sidebarOpen ? 1 : 0,
+              opacity: isOpen ? 1 : 0,
               '& .MuiListItemText-primary': {
                 fontSize: '0.875rem',
                 fontWeight: 500,
@@ -266,6 +185,162 @@ export default function Sidebar() {
           />
         </ListItemButton>
       </Box>
+    </>
+  )
+}
+
+export default function Sidebar() {
+  const { state, dispatch, actions } = useApp()
+  const { sidebarOpen, user } = state
+  const theme = useTheme()
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'))
+
+  const handleDrawerClose = () => {
+    dispatch(actions.setSidebar(false))
+  }
+
+  const handleLogout = () => {
+    dispatch(actions.logout())
+  }
+
+  // Em mobile, usar drawer temporário
+  if (isMobile) {
+    return (
+      <Drawer
+        variant="temporary"
+        open={sidebarOpen}
+        onClose={handleDrawerClose}
+        ModalProps={{
+          keepMounted: true, // Better open performance on mobile.
+        }}
+        sx={{
+          '& .MuiDrawer-paper': {
+            width: drawerWidth,
+            backgroundColor: 'background.paper',
+            borderRight: '1px solid',
+            borderColor: 'divider',
+          },
+        }}
+      >
+        {/* Mobile Sidebar Content */}
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            px: 2,
+            py: 2,
+            minHeight: 64,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Avatar
+              sx={{
+                width: 32,
+                height: 32,
+                bgcolor: 'primary.main',
+                fontSize: '1rem',
+              }}
+            >
+              RF
+            </Avatar>
+            <Typography variant="h6" noWrap component="div" fontWeight={600}>
+              Rider Finance
+            </Typography>
+          </Box>
+          <IconButton onClick={handleDrawerClose}>
+            <ChevronLeft />
+          </IconButton>
+        </Box>
+        
+        <Divider />
+        
+        <SidebarContent user={user} handleLogout={handleLogout} isOpen={true} />
+      </Drawer>
+    )
+  }
+
+  // Desktop: drawer permanente
+  return (
+    <Drawer
+      variant="permanent"
+      open={sidebarOpen}
+      sx={{
+        width: sidebarOpen ? drawerWidth : mobileDrawerWidth,
+        flexShrink: 0,
+        whiteSpace: 'nowrap',
+        boxSizing: 'border-box',
+        '& .MuiDrawer-paper': {
+          width: sidebarOpen ? drawerWidth : mobileDrawerWidth,
+          overflowX: 'hidden',
+          backgroundColor: 'background.paper',
+          borderRight: '1px solid',
+          borderColor: 'divider',
+          transition: theme.transitions.create('width', {
+            easing: theme.transitions.easing.sharp,
+            duration: theme.transitions.duration.enteringScreen,
+          }),
+        },
+      }}
+    >
+      {/* Header */}
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: sidebarOpen ? 'space-between' : 'center',
+          px: sidebarOpen ? 2 : 1,
+          py: 2,
+          minHeight: 64,
+        }}
+      >
+        {sidebarOpen && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Avatar
+              sx={{
+                width: 32,
+                height: 32,
+                bgcolor: 'primary.main',
+                fontSize: '1rem',
+              }}
+            >
+              RF
+            </Avatar>
+            <Typography variant="h6" noWrap component="div" fontWeight={600}>
+              Rider Finance
+            </Typography>
+          </Box>
+        )}
+        {!sidebarOpen && (
+          <Avatar
+            sx={{
+              width: 40,
+              height: 40,
+              bgcolor: 'primary.main',
+              fontSize: '1.2rem',
+            }}
+          >
+            RF
+          </Avatar>
+        )}
+        {sidebarOpen && (
+          <IconButton
+            onClick={handleDrawerClose}
+            sx={{
+              color: 'text.secondary',
+              '&:hover': {
+                backgroundColor: 'action.hover',
+              },
+            }}
+          >
+            <ChevronLeft />
+          </IconButton>
+        )}
+      </Box>
+
+      <Divider />
+      
+      <SidebarContent user={user} handleLogout={handleLogout} isOpen={sidebarOpen} />
     </Drawer>
   )
 }
