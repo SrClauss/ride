@@ -4,6 +4,7 @@ import { ThemeProvider } from "../components/theme/ThemeProvider";
 import MainLayout from "../components/layout/MainLayout";
 import { NoSSR } from "../components/common/NoSSR";
 import "./globals.css";
+import "@/lib/fontawesome";
 
 export const metadata: Metadata = {
   title: "Rider Finance",

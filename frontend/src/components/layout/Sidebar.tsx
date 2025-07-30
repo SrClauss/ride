@@ -27,6 +27,7 @@ import {
   Logout,
 } from '@mui/icons-material'
 import { useApp } from '../../store/context'
+import { useRouter, usePathname } from 'next/navigation'
 
 const menuItems = [
   { icon: DashboardIcon, text: 'Dashboard', path: '/' },
@@ -46,6 +47,13 @@ function SidebarContent({ user, handleLogout, isOpen }: {
   handleLogout: () => void; 
   isOpen: boolean 
 }) {
+  const router = useRouter()
+  const pathname = usePathname()
+
+  const handleNavigation = (path: string) => {
+    router.push(path)
+  }
+
   return (
     <>
       {/* User Info */}
@@ -105,17 +113,21 @@ function SidebarContent({ user, handleLogout, isOpen }: {
       <List sx={{ flexGrow: 1, px: 1 }}>
         {menuItems.map((item) => {
           const Icon = item.icon
+          const isActive = pathname === item.path
           return (
             <ListItem key={item.text} disablePadding sx={{ display: 'block' }}>
               <ListItemButton
+                onClick={() => handleNavigation(item.path)}
                 sx={{
                   minHeight: 48,
                   justifyContent: isOpen ? 'initial' : 'center',
                   px: 2.5,
                   borderRadius: 1,
                   mb: 0.5,
+                  backgroundColor: isActive ? 'primary.main' : 'transparent',
+                  color: isActive ? 'primary.contrastText' : 'text.primary',
                   '&:hover': {
-                    backgroundColor: 'action.hover',
+                    backgroundColor: isActive ? 'primary.dark' : 'action.hover',
                   },
                 }}
               >
@@ -124,7 +136,7 @@ function SidebarContent({ user, handleLogout, isOpen }: {
                     minWidth: 0,
                     mr: isOpen ? 3 : 'auto',
                     justifyContent: 'center',
-                    color: 'text.primary',
+                    color: isActive ? 'primary.contrastText' : 'text.primary',
                   }}
                 >
                   <Icon />
@@ -135,7 +147,7 @@ function SidebarContent({ user, handleLogout, isOpen }: {
                     opacity: isOpen ? 1 : 0,
                     '& .MuiListItemText-primary': {
                       fontSize: '0.875rem',
-                      fontWeight: 500,
+                      fontWeight: isActive ? 600 : 500,
                     },
                   }}
                 />

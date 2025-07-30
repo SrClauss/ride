@@ -12,6 +12,8 @@ import {
   IconButton,
   Button,
   Divider,
+  CircularProgress,
+  Alert,
 } from '@mui/material'
 import {
   TrendingUp,
@@ -26,76 +28,102 @@ import {
   Stop,
 } from '@mui/icons-material'
 import { useApp } from '../../store/context'
+import { useDashboardData } from '../../hooks/useDashboardApi'
+import { useTransactionsData } from '../../hooks/useTransactionsApi'
+import { Transaction } from '../../hooks/useTransactionsApi'
+import { getCurrentDataSource } from '../../services/dataService'
 
-// Mock data - será substituído por dados reais da API
-const mockDashboardData = {
-  today: {
-    income: 287.50,
-    expenses: 95.20,
-    profit: 192.30,
-    trips: 14,
-    hours: 8.5,
-    efficiency: 85,
-  },
-  thisWeek: {
-    income: 1420.30,
-    expenses: 456.80,
-    profit: 963.50,
-    trips: 73,
-    hours: 42,
-  },
-  goals: {
-    dailyTarget: 250,
-    weeklyTarget: 1750,
-    weeklyKmTarget: 500,
-  },
-  recentTransactions: [
-    {
-      id: 1,
-      type: 'income' as const,
-      amount: 34.50,
-      description: 'Corrida Centro → Aeroporto',
-      category: 'Uber',
-      time: '16:45',
-      platform: 'Uber',
-    },
-    {
-      id: 2,
-      type: 'income' as const,
-      amount: 28.90,
-      description: 'Viagem Zona Sul',
-      category: '99',
-      time: '15:30',
-      platform: '99',
-    },
-    {
-      id: 3,
-      type: 'expense' as const,
-      amount: 85.00,
-      description: 'Abastecimento Completo',
-      category: 'Combustível',
-      time: '14:30',
-    },
-  ],
-}
-
-export default function Dashboard() {
+const Dashboard: React.FC = () => {
   const { state } = useApp()
   const { user } = state
   
   const [isWorkSessionActive, setIsWorkSessionActive] = React.useState(false)
-  const [sessionDuration, setSessionDuration] = React.useState(0)
+  const [sessionDuration] = React.useState(0)
 
-  // Usar dados reais do usuário ou dados mock como fallback
+  // Buscar dados reais da API ou mocks
+  const { data: dashboardData, loading: dashboardLoading, error: dashboardError } = useDashboardData()
+  const { 
+    transactions: recentTransactions
+  } = useTransactionsData(1, 5) // Últimas 5 transações
+
+  // Debug: mostrar fonte dos dados
+  React.useEffect(() => {
+    const dataSource = getCurrentDataSource()
+    console.log(`🔧 Dashboard usando dados: ${dataSource.toUpperCase()}`)
+  }, [])
+
+  // Usar dados da API/mock - estrutura compatível
   const data = React.useMemo(() => {
-    // TODO: Integrar com API para buscar dados reais do usuário
-    // Por enquanto, personalizar dados mock com nome do usuário
-    return {
-      ...mockDashboardData,
-      userName: user?.fullName || user?.username || 'Usuário',
-      userEmail: user?.email || 'usuario@exemplo.com'
+    if (dashboardData) {
+      return {
+        userName: user?.fullName || user?.username || 'Usuário',
+        userEmail: user?.email || 'usuario@exemplo.com',
+        today: {
+          income: dashboardData.ganhos_hoje || 0,
+          expenses: dashboardData.gastos_hoje || 0,
+          profit: (dashboardData.ganhos_hoje || 0) - (dashboardData.gastos_hoje || 0),
+          trips: dashboardData.corridas_hoje || 0,
+          hours: dashboardData.horas_hoje || 0,
+          efficiency: dashboardData.eficiencia || 0,
+        },
+        thisWeek: {
+          income: dashboardData.ganhos_semana || 0,
+          expenses: dashboardData.gastos_semana || 0,
+          profit: (dashboardData.ganhos_semana || 0) - (dashboardData.gastos_semana || 0),
+          trips: dashboardData.corridas_semana || 0,
+          hours: dashboardData.horas_semana || 0,
+        },
+        goals: {
+          dailyTarget: dashboardData.meta_diaria || 250,
+          weeklyTarget: dashboardData.meta_semanal || 1750,
+          weeklyKmTarget: 500,
+        },
+        recentTransactions: recentTransactions || [],
+        trends: {
+          income: dashboardData.tendencia_ganhos || 0,
+          expenses: dashboardData.tendencia_gastos || 0,
+          rides: dashboardData.tendencia_corridas || 0,
+        }
+      }
     }
-  }, [user])
+
+    // Fallback - não deveria chegar aqui com a nova estrutura
+    return {
+      userName: user?.fullName || user?.username || 'Usuário',
+      userEmail: user?.email || 'usuario@exemplo.com',
+      today: { income: 0, expenses: 0, profit: 0, trips: 0, hours: 0, efficiency: 0 },
+      thisWeek: { income: 0, expenses: 0, profit: 0, trips: 0, hours: 0 },
+      goals: { dailyTarget: 250, weeklyTarget: 1750, weeklyKmTarget: 500 },
+      recentTransactions: [],
+      trends: { income: 0, expenses: 0, rides: 0 }
+    }
+  }, [dashboardData, user, recentTransactions])
+
+  // Loading state
+  if (dashboardLoading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress />
+        <Typography variant="body1" sx={{ ml: 2 }}>
+          Carregando dados do dashboard...
+        </Typography>
+      </Box>
+    )
+  }
+
+  // Error state
+  if (dashboardError) {
+    return (
+      <Box sx={{ p: 2 }}>
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {dashboardError}
+        </Alert>
+        <Typography variant="body2" color="text.secondary">
+          Verificar se o backend está rodando e as configurações de API estão corretas.
+        </Typography>
+      </Box>
+    )
+  }
 
   // Calcular progresso das metas
   const dailyProgress = (data.today.income / data.goals.dailyTarget) * 100
@@ -115,8 +143,8 @@ export default function Dashboard() {
       icon: TrendingUp,
       color: 'success.main',
       bgColor: 'success.light',
-      trend: '+12.5%',
-      trendUp: true,
+      trend: `${data.trends.income > 0 ? '+' : ''}${data.trends.income.toFixed(1)}%`,
+      trendUp: data.trends.income > 0,
     },
     {
       label: 'Gastos Hoje',
@@ -124,8 +152,8 @@ export default function Dashboard() {
       icon: TrendingDown,
       color: 'error.main',
       bgColor: 'error.light',
-      trend: '-8.2%',
-      trendUp: false,
+      trend: `${data.trends.expenses > 0 ? '+' : ''}${data.trends.expenses.toFixed(1)}%`,
+      trendUp: data.trends.expenses < 0, // Menor gasto é bom
     },
     {
       label: 'Corridas',
@@ -133,8 +161,8 @@ export default function Dashboard() {
       icon: DirectionsCar,
       color: 'primary.main',
       bgColor: 'primary.light',
-      trend: '+3',
-      trendUp: true,
+      trend: `${data.trends.rides > 0 ? '+' : ''}${data.trends.rides.toFixed(1)}%`,
+      trendUp: data.trends.rides > 0,
     },
     {
       label: 'Horas Online',
@@ -142,7 +170,7 @@ export default function Dashboard() {
       icon: Schedule,
       color: 'warning.main',
       bgColor: 'warning.light',
-      trend: '+1.5h',
+      trend: `+${data.today.hours > 0 ? (data.today.hours * 0.1).toFixed(1) : 0}h`,
       trendUp: true,
     },
   ]
@@ -155,19 +183,36 @@ export default function Dashboard() {
     }}>
       {/* Welcome Header */}
       <Box sx={{ mb: { xs: 2, md: 4 } }}>
-        <Typography 
-          variant="h4" 
-          fontWeight={700} 
-          gutterBottom
-          sx={{ 
-            fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' }
-          }}
-        >
-          Bem-vindo de volta, {data.userName?.split(' ')[0] || 'Usuário'}!
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
+          <Typography 
+            variant="h4" 
+            fontWeight={700} 
+            sx={{ 
+              fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' }
+            }}
+          >
+            Bem-vindo de volta, {data.userName?.split(' ')[0] || 'Usuário'}!
+          </Typography>
+          <Chip
+            label={getCurrentDataSource() === 'mock' ? 'DADOS MOCK' : 'DADOS REAIS'}
+            size="small"
+            color={getCurrentDataSource() === 'mock' ? 'warning' : 'success'}
+            variant="outlined"
+            sx={{ 
+              fontWeight: 600,
+              fontSize: '0.75rem',
+              display: { xs: 'none', sm: 'flex' }
+            }}
+          />
+        </Box>
         <Typography variant="body1" color="text.secondary">
           Acompanhe seus ganhos em tempo real e gerencie sua jornada
         </Typography>
+        {getCurrentDataSource() === 'mock' && (
+          <Typography variant="body2" color="warning.main" sx={{ mt: 1, fontStyle: 'italic' }}>
+            💡 Exibindo dados simulados. Configure NEXT_PUBLIC_USE_MOCK_DATA=api no .env.local para usar dados reais.
+          </Typography>
+        )}
       </Box>
 
       {/* Quick Stats */}
@@ -532,34 +577,34 @@ export default function Dashboard() {
                 </Box>
               ) : (
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {data.recentTransactions.map((transaction: any, index: number) => (
+                  {data.recentTransactions.map((transaction: Transaction, index: number) => (
                     <Box key={transaction.id}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         <Avatar
                           sx={{
-                            backgroundColor: transaction.type === 'income' ? 'success.light' : 'error.light',
-                            color: transaction.type === 'income' ? 'success.dark' : 'error.dark',
+                            backgroundColor: transaction.tipo === 'receita' ? 'success.light' : 'error.light',
+                            color: transaction.tipo === 'receita' ? 'success.dark' : 'error.dark',
                           }}
                         >
-                          {transaction.type === 'income' ? <TrendingUp /> : <TrendingDown />}
+                          {transaction.tipo === 'receita' ? <TrendingUp /> : <TrendingDown />}
                         </Avatar>
                         
                         <Box sx={{ flexGrow: 1 }}>
                           <Typography variant="body1" fontWeight={500}>
-                            {transaction.description}
+                            {transaction.descricao}
                           </Typography>
                           <Typography variant="body2" color="text.secondary">
-                            {transaction.category} • {transaction.time}
+                            {transaction.nome_categoria} • {new Date(transaction.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           </Typography>
                         </Box>
                         
                         <Typography
                           variant="h6"
                           fontWeight={600}
-                          color={transaction.type === 'income' ? 'success.main' : 'error.main'}
+                          color={transaction.tipo === 'receita' ? 'success.main' : 'error.main'}
                         >
-                          {transaction.type === 'income' ? '+' : '-'}
-                          {formatCurrency(transaction.amount)}
+                          {transaction.tipo === 'receita' ? '+' : '-'}
+                          {formatCurrency(transaction.valor)}
                         </Typography>
                       </Box>
                       
@@ -577,3 +622,5 @@ export default function Dashboard() {
     </Box>
   )
 }
+
+export default Dashboard
