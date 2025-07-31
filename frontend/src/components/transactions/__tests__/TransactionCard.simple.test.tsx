@@ -109,7 +109,7 @@ describe('TransactionCard Component - Testes Básicos', () => {
     expect(screen.getByText('Corrida Shopping Center')).toBeInTheDocument()
     expect(screen.getByText('InDriver')).toBeInTheDocument()
     expect(screen.getByText('14:15')).toBeInTheDocument()
-    expect(screen.getByText('Pendente')).toBeInTheDocument()
+    expect(screen.getAllByText('Pendente')).toHaveLength(2) // Mobile + Desktop
   })
 
   it('deve exibir valores monetários formatados', () => {
@@ -122,7 +122,7 @@ describe('TransactionCard Component - Testes Básicos', () => {
       </TestWrapper>
     )
 
-    expect(screen.getByText('+R$ 34,50')).toBeInTheDocument()
+    expect(screen.getAllByText('+R$ 34,50')).toHaveLength(2) // Mobile + Desktop
 
     rerender(
       <TestWrapper>
@@ -133,7 +133,7 @@ describe('TransactionCard Component - Testes Básicos', () => {
       </TestWrapper>
     )
 
-    expect(screen.getByText('-R$ 85,00')).toBeInTheDocument()
+    expect(screen.getAllByText('-R$ 85,00')).toHaveLength(2) // Mobile + Desktop
   })
 
   it('deve exibir status correto', () => {
@@ -146,7 +146,7 @@ describe('TransactionCard Component - Testes Básicos', () => {
       </TestWrapper>
     )
 
-    expect(screen.getByText('Concluída')).toBeInTheDocument()
+    expect(screen.getAllByText('Concluída')).toHaveLength(2) // Mobile + Desktop
 
     rerender(
       <TestWrapper>
@@ -157,7 +157,7 @@ describe('TransactionCard Component - Testes Básicos', () => {
       </TestWrapper>
     )
 
-    expect(screen.getByText('Pendente')).toBeInTheDocument()
+    expect(screen.getAllByText('Pendente')).toHaveLength(2) // Mobile + Desktop
   })
 
   it('deve exibir ícones FontAwesome', () => {
@@ -183,8 +183,9 @@ describe('TransactionCard Component - Testes Básicos', () => {
       </TestWrapper>
     )
 
-    const menuButton = screen.getByRole('button')
-    expect(menuButton).toBeInTheDocument()
+    const menuButtons = screen.getAllByRole('button')
+    expect(menuButtons).toHaveLength(2) // Mobile + Desktop
+    expect(menuButtons[0]).toBeInTheDocument()
   })
 
   it('deve chamar onMenuClick quando botão é clicado', () => {
@@ -197,8 +198,8 @@ describe('TransactionCard Component - Testes Básicos', () => {
       </TestWrapper>
     )
 
-    const menuButton = screen.getByRole('button')
-    fireEvent.click(menuButton)
+    const menuButtons = screen.getAllByRole('button')
+    fireEvent.click(menuButtons[0]) // Clica no primeiro botão (mobile ou desktop)
 
     expect(mockOnMenuClick).toHaveBeenCalledWith(expect.any(Object), incomeTransaction.id)
   })

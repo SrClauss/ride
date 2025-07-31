@@ -13,7 +13,6 @@ import {
   Chip,
   Stack,
   Button,
-  Divider,
   FormControlLabel,
   Switch,
   Slider,

@@ -17,7 +17,6 @@ import {
   Box,
   Typography,
   InputAdornment,
-  Chip,
   FormHelperText,
   Avatar
 } from '@mui/material'
@@ -28,7 +27,6 @@ import {
   LocalGasStation as FuelIcon,
   Restaurant as RestaurantIcon,
   Phone as PhoneIcon,
-  Coffee as CoffeeIcon,
   ShoppingCart as ShoppingIcon,
   Receipt as ReceiptIcon,
   Close as CloseIcon

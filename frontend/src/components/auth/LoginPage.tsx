@@ -73,7 +73,7 @@ export default function LoginPage() {
       localStorage.setItem('authToken', mockToken)
       localStorage.setItem('userData', JSON.stringify(mockUser))
       
-    } catch (err) {
+    } catch {
       setError('Erro ao fazer login. Verifique suas credenciais.')
     } finally {
       setIsLoading(false)

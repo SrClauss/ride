@@ -46,12 +46,6 @@ const Dashboard: React.FC = () => {
     transactions: recentTransactions
   } = useTransactionsData(1, 5) // Últimas 5 transações
 
-  // Debug: mostrar fonte dos dados
-  React.useEffect(() => {
-    const dataSource = getCurrentDataSource()
-    console.log(`🔧 Dashboard usando dados: ${dataSource.toUpperCase()}`)
-  }, [])
-
   // Usar dados da API/mock - estrutura compatível
   const data = React.useMemo(() => {
     if (dashboardData) {

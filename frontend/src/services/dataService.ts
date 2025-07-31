@@ -6,8 +6,6 @@ import {
   mockTransactions, 
   mockCategories,
   mockTransactionSummary,
-  mockDailyTransactions,
-  createMockApiResponse,
   mockApiDelay,
   type MockTransaction,
   type MockDashboardData,

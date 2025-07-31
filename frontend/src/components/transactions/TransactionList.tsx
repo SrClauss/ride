@@ -14,41 +14,51 @@ import {
   MenuItem,
   Divider,
   Button,
-  LinearProgress,
   Avatar,
   Stack,
   Badge,
-  Tooltip
+  Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Snackbar,
+  Alert
 } from '@mui/material'
 import {
   Search as SearchIcon,
   FilterList as FilterListIcon,
-  MoreVert as MoreVertIcon,
   Add as AddIcon,
   TrendingUp as TrendingUpIcon,
   TrendingDown as TrendingDownIcon,
   AccountBalanceWallet as WalletIcon,
   Receipt as ReceiptIcon,
-  LocalGasStation as FuelIcon,
-  Restaurant as RestaurantIcon,
-  Phone as PhoneIcon,
-  DirectionsCar as CarIcon,
-  Coffee as CoffeeIcon,
-  ShoppingCart as ShoppingIcon,
-  CreditCard as CreditCardIcon,
   Edit as EditIcon,
   Delete as DeleteIcon,
   ContentCopy as CopyIcon,
   Visibility as VisibilityIcon,
-  CalendarMonth as CalendarIcon,
-  FileDownload as DownloadIcon,
-  Upload as UploadIcon
+  FileDownload as DownloadIcon
 } from '@mui/icons-material'
 import FilterDrawer, { FilterOptions } from './FilterDrawer'
 import TransactionCard from './TransactionCard'
+import TransactionModal, { TransactionFormData } from './TransactionModal'
+
+// Interface para transações mock
+interface MockTransaction {
+  id: number
+  description: string
+  amount: number
+  type: 'income' | 'expense'
+  category: string
+  date: string
+  time: string
+  status: 'completed' | 'pending'
+  platform?: string
+  location?: string
+}
 
 // Mock data para demonstração - dados realistas de motorista de aplicativo
-const mockTransactions = [
+const mockTransactions: MockTransaction[] = [
   {
     id: 1,
     description: 'Combustível',
@@ -116,20 +126,24 @@ const formatCurrency = (amount: number): string => {
   }).format(amount)
 }
 
-const formatTime = (timeString: string): string => {
-  return timeString
-}
-
-interface TransactionListProps {
-  onAddTransaction?: () => void
-}
-
-export default function TransactionList({ onAddTransaction }: TransactionListProps) {
+export default function TransactionList() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'income' | 'expense'>('all')
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null)
   const [selectedTransaction, setSelectedTransaction] = useState<number | null>(null)
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false)
+  const [isTransactionModalOpen, setIsTransactionModalOpen] = useState(false)
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false)
+  const [transactionToEdit, setTransactionToEdit] = useState<TransactionFormData | null>(null)
+  const [snackbar, setSnackbar] = useState<{
+    open: boolean
+    message: string
+    severity: 'success' | 'error' | 'warning' | 'info'
+  }>({
+    open: false,
+    message: '',
+    severity: 'success'
+  })
   const [advancedFilters, setAdvancedFilters] = useState<FilterOptions>({
     dateRange: { start: '', end: '' },
     amountRange: { min: 0, max: 1000 },
@@ -214,7 +228,98 @@ export default function TransactionList({ onAddTransaction }: TransactionListPro
 
   const handleMenuClose = () => {
     setAnchorEl(null)
-    setSelectedTransaction(null)
+    // Não zerar selectedTransaction se algum modal estiver aberto
+    if (!isDetailsModalOpen && !isTransactionModalOpen) {
+      setSelectedTransaction(null)
+    }
+  }
+
+  // Função para converter transação mock para formato do modal
+  const convertToModalFormat = (transaction: MockTransaction): TransactionFormData => {
+    return {
+      id: transaction.id,
+      type: transaction.type,
+      amount: transaction.amount,
+      category: transaction.category,
+      description: transaction.description,
+      date: transaction.date.split('T')[0], // Apenas a data, sem o horário
+      platform: transaction.platform || '',
+      location: transaction.location || ''
+    }
+  }
+
+  // Handler para ver detalhes da transação
+  const handleViewDetails = () => {
+    if (selectedTransaction !== null) {
+      const transactionId = selectedTransaction
+      handleMenuClose()
+      // Usar um timeout para garantir que o modal abra após o menu fechar
+      setTimeout(() => {
+        setSelectedTransaction(transactionId)
+        setIsDetailsModalOpen(true)
+      }, 100)
+    }
+  }
+
+  // Handler para editar transação
+  const handleEditTransaction = () => {
+    if (selectedTransaction !== null) {
+      const transaction = filteredTransactions.find(t => t.id === selectedTransaction)
+      if (transaction) {
+        setTransactionToEdit(convertToModalFormat(transaction))
+        setIsTransactionModalOpen(true)
+      }
+    }
+    handleMenuClose()
+  }
+
+  // Handler para duplicar transação
+  const handleDuplicateTransaction = () => {
+    if (selectedTransaction !== null) {
+      const transaction = mockTransactions.find(t => t.id === selectedTransaction)
+      if (transaction) {
+        const converted = convertToModalFormat(transaction)
+        // Remove o ID para criar uma nova transação
+        const { ...transactionWithoutId } = converted
+        setTransactionToEdit({
+          ...transactionWithoutId,
+          description: `${transactionWithoutId.description} (Cópia)`
+        })
+        setIsTransactionModalOpen(true)
+      }
+    }
+    handleMenuClose()
+  }
+
+  // Handler para excluir transação
+  const handleDeleteTransaction = () => {
+    if (selectedTransaction !== null) {
+      if (window.confirm('Tem certeza que deseja excluir esta transação?')) {
+        try {
+          // Aqui você implementaria a lógica de exclusão
+          // TODO: Implementar chamada para API de exclusão
+          
+          setSnackbar({
+            open: true,
+            message: 'Transação excluída com sucesso!',
+            severity: 'success'
+          })
+        } catch {
+          setSnackbar({
+            open: true,
+            message: 'Erro ao excluir transação. Tente novamente.',
+            severity: 'error'
+          })
+        }
+      }
+    }
+    handleMenuClose()
+  }
+
+  // Handler para adicionar nova transação
+  const handleAddTransaction = () => {
+    setTransactionToEdit(null)
+    setIsTransactionModalOpen(true)
   }
 
   const handleApplyFilters = (filters: FilterOptions) => {
@@ -246,7 +351,7 @@ export default function TransactionList({ onAddTransaction }: TransactionListPro
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={onAddTransaction}
+          onClick={handleAddTransaction}
           sx={{
             borderRadius: 2,
             textTransform: 'none',
@@ -452,7 +557,7 @@ export default function TransactionList({ onAddTransaction }: TransactionListPro
             <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
               {searchQuery ? 'Tente ajustar sua busca ou filtros' : 'Suas transações aparecerão aqui'}
             </Typography>
-            <Button variant="contained" startIcon={<AddIcon />} onClick={onAddTransaction}>
+            <Button variant="contained" startIcon={<AddIcon />} onClick={handleAddTransaction}>
               Adicionar Primeira Transação
             </Button>
           </Card>
@@ -475,20 +580,20 @@ export default function TransactionList({ onAddTransaction }: TransactionListPro
         transformOrigin={{ horizontal: 'right', vertical: 'top' }}
         anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
-        <MenuItem onClick={handleMenuClose}>
+        <MenuItem onClick={handleViewDetails}>
           <VisibilityIcon sx={{ mr: 1 }} />
           Ver Detalhes
         </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
+        <MenuItem onClick={handleEditTransaction}>
           <EditIcon sx={{ mr: 1 }} />
           Editar
         </MenuItem>
-        <MenuItem onClick={handleMenuClose}>
+        <MenuItem onClick={handleDuplicateTransaction}>
           <CopyIcon sx={{ mr: 1 }} />
           Duplicar
         </MenuItem>
         <Divider />
-        <MenuItem onClick={handleMenuClose} sx={{ color: 'error.main' }}>
+        <MenuItem onClick={handleDeleteTransaction} sx={{ color: 'error.main' }}>
           <DeleteIcon sx={{ mr: 1 }} />
           Excluir
         </MenuItem>
@@ -500,6 +605,169 @@ export default function TransactionList({ onAddTransaction }: TransactionListPro
         onClose={() => setIsFilterDrawerOpen(false)}
         onApplyFilters={handleApplyFilters}
       />
+
+      {/* Transaction Modal */}
+      <TransactionModal
+        open={isTransactionModalOpen}
+        onClose={() => setIsTransactionModalOpen(false)}
+        onSubmit={(data: TransactionFormData) => {
+          // TODO: Implementar lógica de salvar transação
+          setIsTransactionModalOpen(false)
+        }}
+        transaction={transactionToEdit}
+      />
+
+      {/* Details Modal */}
+      <Dialog 
+        open={isDetailsModalOpen} 
+        onClose={() => {
+          setIsDetailsModalOpen(false)
+          setSelectedTransaction(null)
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          Detalhes da Transação
+        </DialogTitle>
+        <DialogContent>
+          {selectedTransaction !== null && (() => {
+            const transaction = filteredTransactions.find(t => t.id === selectedTransaction)
+            if (!transaction) return null
+            
+            return (
+              <Box sx={{ pt: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                  <Avatar
+                    sx={{
+                      backgroundColor: transaction.type === 'income' ? 'success.light' : 'error.light',
+                      color: transaction.type === 'income' ? 'success.dark' : 'error.dark',
+                      mr: 2
+                    }}
+                  >
+                    {transaction.type === 'income' ? <TrendingUpIcon /> : <TrendingDownIcon />}
+                  </Avatar>
+                  <Box>
+                    <Typography variant="h6" fontWeight={600}>
+                      {transaction.description}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {transaction.category}
+                    </Typography>
+                  </Box>
+                </Box>
+                
+                <Divider sx={{ my: 2 }} />
+                
+                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2 }}>
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Valor
+                    </Typography>
+                    <Typography variant="h6" color={transaction.type === 'income' ? 'success.main' : 'error.main'}>
+                      {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                    </Typography>
+                  </Box>
+                  
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Data
+                    </Typography>
+                    <Typography variant="body1">
+                      {new Date(transaction.date).toLocaleDateString('pt-BR')}
+                    </Typography>
+                  </Box>
+                  
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Horário
+                    </Typography>
+                    <Typography variant="body1">
+                      {transaction.time}
+                    </Typography>
+                  </Box>
+                  
+                  <Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      Status
+                    </Typography>
+                    <Chip 
+                      label={transaction.status === 'completed' ? 'Concluída' : 
+                             transaction.status === 'pending' ? 'Pendente' : 'Cancelada'}
+                      size="small"
+                      color={transaction.status === 'completed' ? 'success' : 
+                             transaction.status === 'pending' ? 'warning' : 'error'}
+                    />
+                  </Box>
+                  
+                  {transaction.platform && (
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Plataforma
+                      </Typography>
+                      <Typography variant="body1">
+                        {transaction.platform}
+                      </Typography>
+                    </Box>
+                  )}
+                  
+                  {transaction.location && (
+                    <Box>
+                      <Typography variant="body2" color="text.secondary" gutterBottom>
+                        Local
+                      </Typography>
+                      <Typography variant="body1">
+                        {transaction.location}
+                      </Typography>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            )
+          })()}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setIsDetailsModalOpen(false)
+            setSelectedTransaction(null)
+          }}>
+            Fechar
+          </Button>
+          <Button 
+            variant="contained" 
+            onClick={() => {
+              setIsDetailsModalOpen(false)
+              setTimeout(() => {
+                if (selectedTransaction !== null) {
+                  const transaction = filteredTransactions.find(t => t.id === selectedTransaction)
+                  if (transaction) {
+                    setTransactionToEdit(convertToModalFormat(transaction))
+                    setIsTransactionModalOpen(true)
+                  }
+                }
+              }, 100)
+            }}
+          >
+            Editar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar para feedback */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar(prev => ({ ...prev, open: false }))}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert 
+          onClose={() => setSnackbar(prev => ({ ...prev, open: false }))} 
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   )
 }

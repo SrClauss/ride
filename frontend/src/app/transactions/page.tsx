@@ -9,10 +9,6 @@ import TransactionModal, { TransactionFormData } from '@/components/transactions
 export default function TransactionsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
 
-  const handleAddTransaction = () => {
-    setIsAddModalOpen(true)
-  }
-
   const handleCloseModal = () => {
     setIsAddModalOpen(false)
   }
@@ -29,7 +25,7 @@ export default function TransactionsPage() {
         minHeight: 'calc(100vh - 64px)',
         bgcolor: 'background.default'
       }}>
-        <TransactionList onAddTransaction={handleAddTransaction} />
+        <TransactionList />
         
         <TransactionModal 
           open={isAddModalOpen} 

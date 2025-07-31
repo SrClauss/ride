@@ -3,10 +3,7 @@
 import React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { 
-  faUber, 
-  faApple,
-  faCcVisa,
-  faCcMastercard
+  faUber
 } from '@fortawesome/free-brands-svg-icons'
 import {
   faCar,
@@ -17,11 +14,7 @@ import {
   faShoppingBag,
   faReceipt,
   faLocationDot,
-  faClock,
-  faEllipsisVertical,
-  faCheck,
-  faArrowUp,
-  faArrowDown
+  faEllipsisVertical
 } from '@fortawesome/free-solid-svg-icons'
 import {
   Box,
@@ -29,7 +22,6 @@ import {
   Typography,
   Chip,
   IconButton,
-  Stack,
   useTheme
 } from '@mui/material'
 

@@ -19,7 +19,6 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const { sidebarOpen } = state
   const theme = useTheme()
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
-  const isTablet = useMediaQuery(theme.breakpoints.between('md', 'lg'))
 
   return (
     <AuthGuard>

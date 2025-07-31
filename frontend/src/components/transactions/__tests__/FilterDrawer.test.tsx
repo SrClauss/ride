@@ -5,6 +5,12 @@ import { ThemeProvider } from '@mui/material/styles'
 import { darkTheme } from '../../../theme/uber-theme'
 import FilterDrawer, { FilterOptions } from '../FilterDrawer'
 
+interface FilterDrawerProps {
+  open: boolean
+  onClose: () => void
+  onApplyFilters?: (filters: FilterOptions) => void
+}
+
 const TestWrapper = ({ children }: { children: React.ReactNode }) => (
   <ThemeProvider theme={darkTheme}>
     {children}
@@ -12,8 +18,8 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => (
 )
 
 describe('FilterDrawer Component', () => {
-  const mockOnApply = jest.fn()
-  const mockOnClose = jest.fn()
+  const mockOnApply = jest.fn<void, [FilterOptions]>()
+  const mockOnClose = jest.fn<void, []>()
 
   const defaultFilters: FilterOptions = {
     type: 'all',
@@ -31,7 +37,7 @@ describe('FilterDrawer Component', () => {
     sortOrder: 'desc'
   }
 
-  const defaultProps = {
+  const defaultProps: FilterDrawerProps = {
     open: true,
     onClose: mockOnClose,
     onApplyFilters: mockOnApply

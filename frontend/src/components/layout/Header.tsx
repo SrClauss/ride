@@ -12,12 +12,10 @@ import {
   Menu,
   MenuItem,
   Chip,
-  useTheme,
 } from '@mui/material'
 import {
   Menu as MenuIcon,
   Notifications,
-  AccountCircle,
   Brightness4,
   Brightness7,
 } from '@mui/icons-material'
@@ -25,9 +23,8 @@ import { useApp, useTheme as useAppTheme } from '../../store/context'
 
 export default function Header() {
   const { state, dispatch, actions } = useApp()
-  const { sidebarOpen, user } = state
+  const { user } = state
   const { theme, toggleTheme } = useAppTheme()
-  const muiTheme = useTheme()
   
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null)
 

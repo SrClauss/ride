@@ -12,8 +12,6 @@ const TestWrapper = ({ children }: { children: React.ReactNode }) => (
 )
 
 describe('TransactionList Component', () => {
-  const mockOnAddTransaction = jest.fn()
-
   beforeEach(() => {
     jest.clearAllMocks()
   })
@@ -21,7 +19,7 @@ describe('TransactionList Component', () => {
   it('deve renderizar o componente sem erros', () => {
     render(
       <TestWrapper>
-        <TransactionList onAddTransaction={mockOnAddTransaction} />
+        <TransactionList />
       </TestWrapper>
     )
 
@@ -31,7 +29,7 @@ describe('TransactionList Component', () => {
   it('deve renderizar barra de pesquisa', () => {
     render(
       <TestWrapper>
-        <TransactionList onAddTransaction={mockOnAddTransaction} />
+        <TransactionList />
       </TestWrapper>
     )
 
@@ -42,7 +40,7 @@ describe('TransactionList Component', () => {
   it('deve renderizar transações mocadas', () => {
     render(
       <TestWrapper>
-        <TransactionList onAddTransaction={mockOnAddTransaction} />
+        <TransactionList />
       </TestWrapper>
     )
 
@@ -53,7 +51,7 @@ describe('TransactionList Component', () => {
   it('deve exibir valores das transações', () => {
     render(
       <TestWrapper>
-        <TransactionList onAddTransaction={mockOnAddTransaction} />
+        <TransactionList />
       </TestWrapper>
     )
 
