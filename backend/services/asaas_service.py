@@ -76,7 +76,7 @@ class AsaasService:
     # === CLIENTES ===
     async def create_customer(self, customer_data: CreateCustomerRequest) -> AsaasCustomerResponse:
         """Criar cliente no Asaas"""
-        data = customer_data.dict(exclude_none=True)
+        data = customer_data.model_dump(exclude_none=True)
         result = await self._make_request('POST', 'customers', data)
         return AsaasCustomerResponse(**result)
     
@@ -93,7 +93,7 @@ class AsaasService:
     # === PAGAMENTOS ===
     async def create_payment(self, payment_data: CreatePaymentRequest) -> AsaasPaymentResponse:
         """Criar cobrança no Asaas"""
-        data = payment_data.dict(exclude_none=True)
+        data = payment_data.model_dump(exclude_none=True)
         result = await self._make_request('POST', 'payments', data)
         return AsaasPaymentResponse(**result)
     

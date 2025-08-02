@@ -1,7 +1,7 @@
 """
 Schemas para pagamentos e assinaturas
 """
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from enum import Enum
@@ -46,8 +46,8 @@ class CreateCustomerRequest(BaseModel):
     phone: Optional[str] = Field(None, pattern=r'^\+?[\d\s\-\(\)]+$')
     cpfCnpj: Optional[str] = None
     
-    class Config:
-        schema_extra = {
+    model_config = ConfigDict(
+        json_schema_extra={
             "example": {
                 "name": "João Silva",
                 "email": "joao@email.com",
@@ -55,6 +55,7 @@ class CreateCustomerRequest(BaseModel):
                 "cpfCnpj": "12345678901"
             }
         }
+    )
 
 class CreatePaymentRequest(BaseModel):
     """Criar cobrança no Asaas"""
@@ -65,7 +66,8 @@ class CreatePaymentRequest(BaseModel):
     description: Optional[str] = None
     externalReference: Optional[str] = None
     
-    @validator('value')
+    @field_validator('value')
+    @classmethod
     def validate_value(cls, v):
         if v <= 0:
             raise ValueError('Valor deve ser maior que zero')
@@ -167,15 +169,14 @@ class SubscriptionUpdate(BaseModel):
 class SubscriptionResponse(BaseModel):
     """Response da assinatura interna"""
     id: str
-    user_id: str
-    plan_type: PlanType
+    user_id: str = Field(alias="id_usuario")
+    plan_type: PlanType = Field(alias="tipo_plano")
     status: SubscriptionStatus
     asaas_customer_id: str
     asaas_subscription_id: Optional[str]
-    current_period_start: datetime
-    current_period_end: datetime
-    created_at: datetime
-    updated_at: datetime
+    current_period_start: datetime = Field(alias="periodo_inicio")
+    current_period_end: datetime = Field(alias="periodo_fim")
+    created_at: datetime = Field(alias="criado_em")
+    updated_at: datetime = Field(alias="atualizado_em")
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)

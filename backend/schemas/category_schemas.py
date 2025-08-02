@@ -1,7 +1,7 @@
 """
 Schemas Pydantic para categorias
 """
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional
 from datetime import datetime
 import re
@@ -13,13 +13,15 @@ class CategoryCreate(BaseModel):
     icone: Optional[str] = Field("fas fa-circle", description="Classe do ícone Font Awesome")
     cor: Optional[str] = Field("#6B7280", description="Cor hexadecimal")
 
-    @validator('tipo')
+    @field_validator('tipo')
+    @classmethod
     def validar_tipo(cls, v):
         if v not in ['receita', 'despesa']:
             raise ValueError("Tipo deve ser 'receita' ou 'despesa'")
         return v
 
-    @validator('cor')
+    @field_validator('cor')
+    @classmethod
     def validar_cor(cls, v):
         if v and not re.match(r'^#[0-9A-Fa-f]{6}$', v):
             raise ValueError("Cor deve estar no formato hexadecimal (#RRGGBB)")
@@ -31,7 +33,8 @@ class CategoryUpdate(BaseModel):
     icone: Optional[str] = None
     cor: Optional[str] = None
 
-    @validator('cor')
+    @field_validator('cor')
+    @classmethod
     def validar_cor(cls, v):
         if v and not re.match(r'^#[0-9A-Fa-f]{6}$', v):
             raise ValueError("Cor deve estar no formato hexadecimal (#RRGGBB)")
@@ -49,8 +52,7 @@ class CategoryResponse(BaseModel):
     eh_ativa: bool
     criado_em: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class CategoryUsageStats(BaseModel):
     """Schema para estatísticas de uso da categoria"""

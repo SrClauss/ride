@@ -186,6 +186,16 @@ export interface ApiResponse<T> {
   errors?: Record<string, string[]>
 }
 
+export interface ErrorData {
+  message?: string
+  detail?: string
+  errors?: Record<string, string[]>
+}
+
+export interface RequestParams {
+  [key: string]: string | number | boolean | undefined
+}
+
 export interface PaginatedResponse<T> {
   data: T[]
   total: number

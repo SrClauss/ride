@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios'
-import { ApiResponse } from '../types'
+import { ApiResponse, ErrorData, RequestParams } from '../types'
 
 // Configuração base da API
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
@@ -56,7 +56,7 @@ api.interceptors.response.use(
 // Função para extrair mensagem de erro
 function getErrorMessage(error: AxiosError): string {
   if (error.response?.data) {
-    const data = error.response.data as any
+    const data = error.response.data as ErrorData
     if (data.message) return data.message
     if (data.detail) return data.detail
     if (data.errors) {
@@ -73,7 +73,7 @@ function getErrorMessage(error: AxiosError): string {
 // Funções helper para requisições
 export const apiClient = {
   // GET
-  get: async <T>(url: string, params?: any): Promise<ApiResponse<T>> => {
+  get: async <T>(url: string, params?: RequestParams): Promise<ApiResponse<T>> => {
     try {
       const response = await api.get(url, { params })
       return {
@@ -89,7 +89,7 @@ export const apiClient = {
   },
 
   // POST
-  post: async <T>(url: string, data?: any): Promise<ApiResponse<T>> => {
+  post: async <T>(url: string, data?: unknown): Promise<ApiResponse<T>> => {
     try {
       const response = await api.post(url, data)
       return {
@@ -101,13 +101,13 @@ export const apiClient = {
       return {
         success: false,
         message: getErrorMessage(axiosError),
-        errors: axiosError.response?.data as any,
+        errors: (axiosError.response?.data as ErrorData)?.errors,
       }
     }
   },
 
   // PUT
-  put: async <T>(url: string, data?: any): Promise<ApiResponse<T>> => {
+  put: async <T>(url: string, data?: unknown): Promise<ApiResponse<T>> => {
     try {
       const response = await api.put(url, data)
       return {
@@ -119,7 +119,7 @@ export const apiClient = {
       return {
         success: false,
         message: getErrorMessage(axiosError),
-        errors: axiosError.response?.data as any,
+        errors: (axiosError.response?.data as ErrorData)?.errors,
       }
     }
   },
@@ -141,7 +141,7 @@ export const apiClient = {
   },
 
   // PATCH
-  patch: async <T>(url: string, data?: any): Promise<ApiResponse<T>> => {
+  patch: async <T>(url: string, data?: unknown): Promise<ApiResponse<T>> => {
     try {
       const response = await api.patch(url, data)
       return {
@@ -153,14 +153,14 @@ export const apiClient = {
       return {
         success: false,
         message: getErrorMessage(axiosError),
-        errors: axiosError.response?.data as any,
+        errors: (axiosError.response?.data as ErrorData)?.errors,
       }
     }
   },
 }
 
 // Função para upload de arquivos
-export const uploadFile = async (file: File, url: string): Promise<ApiResponse<any>> => {
+export const uploadFile = async (file: File, url: string): Promise<ApiResponse<{ url: string }>> => {
   try {
     const formData = new FormData()
     formData.append('file', file)

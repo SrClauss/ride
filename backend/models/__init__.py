@@ -1,6 +1,5 @@
 from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Text, ForeignKey
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship, validates
+from sqlalchemy.orm import declarative_base, relationship, validates
 from sqlalchemy.sql import func
 from datetime import datetime, timezone
 import uuid
@@ -355,7 +354,7 @@ class Meta(Base):
         """Calcula porcentagem de progresso"""
         if self.valor_alvo <= 0:
             return 0
-        return min(100, (self.valor_atual / self.valor_alvo) * 100)
+        return (self.valor_atual / self.valor_alvo) * 100
     
     @property
     def progresso_percentual(self):

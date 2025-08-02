@@ -1,7 +1,7 @@
 """
 Schemas Pydantic para transações
 """
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Optional, List
 from datetime import datetime
 
@@ -18,13 +18,15 @@ class TransactionCreate(BaseModel):
     observacoes: Optional[str] = Field(None, description="Observações")
     tags: Optional[List[str]] = Field(None, description="Tags")
 
-    @validator('tipo')
+    @field_validator('tipo')
+    @classmethod
     def validar_tipo(cls, v):
         if v not in ['receita', 'despesa']:
             raise ValueError("Tipo deve ser 'receita' ou 'despesa'")
         return v
 
-    @validator('valor')
+    @field_validator('valor')
+    @classmethod
     def validar_valor(cls, v):
         if v > 999999.99:
             raise ValueError("Valor muito alto")
@@ -39,7 +41,8 @@ class TransactionUpdate(BaseModel):
     observacoes: Optional[str] = None
     tags: Optional[List[str]] = None
 
-    @validator('valor')
+    @field_validator('valor')
+    @classmethod
     def validar_valor(cls, v):
         if v is not None and v > 999999.99:
             raise ValueError("Valor muito alto")
@@ -62,8 +65,7 @@ class TransactionResponse(BaseModel):
     criado_em: datetime
     nome_categoria: Optional[str]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class TransactionFilters(BaseModel):
     """Schema para filtros de transação"""
@@ -77,19 +79,22 @@ class TransactionFilters(BaseModel):
     ordenar_por: str = Field("data", description="Campo para ordenação")
     ordem: str = Field("desc", description="Ordem: asc ou desc")
 
-    @validator('tipo')
+    @field_validator('tipo')
+    @classmethod
     def validar_tipo(cls, v):
         if v and v not in ['receita', 'despesa']:
             raise ValueError("Tipo deve ser 'receita' ou 'despesa'")
         return v
 
-    @validator('ordenar_por')
+    @field_validator('ordenar_por')
+    @classmethod
     def validar_ordenar_por(cls, v):
         if v not in ['data', 'valor', 'categoria']:
             raise ValueError("ordenar_por deve ser 'data', 'valor' ou 'categoria'")
         return v
 
-    @validator('ordem')
+    @field_validator('ordem')
+    @classmethod
     def validar_ordem(cls, v):
         if v not in ['asc', 'desc']:
             raise ValueError("ordem deve ser 'asc' ou 'desc'")

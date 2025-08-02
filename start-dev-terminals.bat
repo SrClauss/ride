@@ -36,13 +36,13 @@ echo [3] Nginx (Proxy) - Porta 80
 echo.
 
 REM Terminal 1: Backend
-start "🚀 BACKEND - FastAPI (Port 8000)" cmd /k "cd /d backend && echo ======================================== && echo    BACKEND - FASTAPI (PORTA 8000) && echo ======================================== && echo. && python -m venv venv && venv\Scripts\activate.bat && echo Instalando dependencias... && pip install -r requirements.txt && echo. && echo Iniciando servidor FastAPI... && python main.py"
+start "🚀 BACKEND - FastAPI (Port 8000)" cmd /k "cd /d backend && echo BACKEND - FASTAPI (PORTA 8000) && echo. && venv\Scripts\activate.bat && echo Iniciando FastAPI... && python main.py"
 
 REM Aguardar um pouco
 timeout /t 2 /nobreak >nul
 
 REM Terminal 2: Frontend
-start "⚡ FRONTEND - Next.js (Port 3000)" cmd /k "cd /d frontend && echo ======================================== && echo   FRONTEND - NEXT.JS (PORTA 3000) && echo ======================================== && echo. && echo Instalando dependencias... && npm install && echo. && echo Iniciando servidor Next.js... && npm run dev"
+start "⚡ FRONTEND - Next.js (Port 3000)" cmd /k "cd /d frontend && echo FRONTEND - NEXT.JS (PORTA 3000) && echo. && echo Iniciando Next.js... && npm run dev"
 
 REM Aguardar um pouco mais
 timeout /t 3 /nobreak >nul

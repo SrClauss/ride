@@ -38,12 +38,14 @@ const menuItems = [
   { icon: SettingsIcon, text: 'Configurações', path: '/settings' },
 ]
 
+import { User } from '../../types'
+
 const drawerWidth = 280
 const mobileDrawerWidth = 72
 
 // Componente para o conteúdo do sidebar (reutilizado em mobile e desktop)
 function SidebarContent({ user, handleLogout, isOpen }: { 
-  user: any; 
+  user: User | null; 
   handleLogout: () => void; 
   isOpen: boolean 
 }) {

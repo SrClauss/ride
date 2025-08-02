@@ -57,8 +57,10 @@ class WebhookHandler:
             logger.info(f"Processando webhook: {event} - Pagamento: {payment_id} - Status: {status}")
             
             # Processar evento baseado no status
-            if event == 'PAYMENT_RECEIVED':
+            if event == 'PAYMENT_RECEIVED' or event == 'PAYMENT_CONFIRMED':
                 return WebhookHandler._handle_payment_received(db, payment_data)
+            elif event == 'PAYMENT_FAILED':
+                return WebhookHandler._handle_payment_failed(db, payment_data)
             elif event == 'PAYMENT_OVERDUE':
                 return WebhookHandler._handle_payment_overdue(db, payment_data)
             elif event == 'PAYMENT_DELETED':
@@ -77,6 +79,9 @@ class WebhookHandler:
     def _handle_payment_received(db: Session, payment_data: Dict[str, Any]) -> bool:
         """Processar pagamento recebido"""
         try:
+            # Chamar SubscriptionService para processar confirmação
+            result = SubscriptionService.process_payment_confirmation(db, payment_data)
+            
             subscription_id = payment_data.get('subscription')
             
             if subscription_id:
@@ -88,13 +93,42 @@ class WebhookHandler:
                 
                 if subscription:
                     # Ativar/estender assinatura
-                    SubscriptionService.extend_subscription(db, subscription.id, days=30)
-                    logger.info(f"Assinatura estendida: {subscription.id}")
+                    subscription.status = 'ACTIVE'
+                    db.commit()
+                    logger.info(f"Assinatura ativada: {subscription.id}")
                     
-            return True
+            return result
             
         except Exception as e:
             logger.error(f"Erro ao processar pagamento recebido: {str(e)}")
+            return False
+    
+    @staticmethod
+    def _handle_payment_failed(db: Session, payment_data: Dict[str, Any]) -> bool:
+        """Processar pagamento falhado"""
+        try:
+            # Chamar SubscriptionService para processar falha
+            result = SubscriptionService.process_payment_failure(db, payment_data)
+            
+            subscription_id = payment_data.get('subscription')
+            
+            if subscription_id:
+                from models import Assinatura
+                # Buscar assinatura
+                subscription = db.query(Assinatura).filter(
+                    Assinatura.asaas_subscription_id == subscription_id
+                ).first()
+                
+                if subscription:
+                    # Marcar como inativa por falha de pagamento
+                    subscription.status = 'INACTIVE'
+                    db.commit()
+                    logger.warning(f"Assinatura suspensa por falha de pagamento: {subscription.id}")
+                    
+            return result
+            
+        except Exception as e:
+            logger.error(f"Erro ao processar falha de pagamento: {str(e)}")
             return False
     
     @staticmethod
@@ -185,3 +219,29 @@ class WebhookHandler:
             logger.info(f"Webhook processado com sucesso: {json.dumps(log_data)}")
         else:
             logger.error(f"Falha ao processar webhook: {json.dumps(log_data)}")
+    
+    @staticmethod  
+    def process_subscription_webhook(db: Session, payload: Dict[str, Any]) -> bool:
+        """Processar webhook de assinatura"""
+        try:
+            event = payload.get('event')
+            subscription_data = payload.get('subscription', {})
+            
+            if not subscription_data:
+                logger.warning("Webhook sem dados de assinatura")
+                return False
+                
+            # Processar diferentes eventos de assinatura
+            if event == 'SUBSCRIPTION_CREATED':
+                return True
+            elif event == 'SUBSCRIPTION_UPDATED':
+                return True
+            elif event == 'SUBSCRIPTION_CANCELLED':
+                return True
+            else:
+                logger.warning(f"Evento de assinatura desconhecido: {event}")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Erro ao processar webhook de assinatura: {str(e)}")
+            return False

@@ -127,9 +127,10 @@ class SubscriptionService:
         subscription.atualizado_em = datetime.now()
         
         db.commit()
+        db.refresh(subscription)
         
         logger.info(f"Assinatura cancelada: {subscription_id}")
-        return True
+        return subscription
     
     @staticmethod
     def extend_subscription(
@@ -237,3 +238,68 @@ class SubscriptionService:
                 'premium': premium
             }
         }
+    
+    @staticmethod
+    def get_user_subscription(db: Session, user_id: str) -> Optional[Assinatura]:
+        """Buscar assinatura do usuário (ativa ou mais recente)"""
+        # Primeiro tenta buscar ativa
+        active = SubscriptionService.get_active_subscription(db, user_id)
+        if active:
+            return active
+            
+        # Se não tem ativa, retorna a mais recente
+        return db.query(Assinatura).filter(
+            Assinatura.id_usuario == user_id
+        ).order_by(Assinatura.criado_em.desc()).first()
+    
+    @staticmethod
+    def activate_trial(db: Session, user_id: str) -> Assinatura:
+        """Ativar período de trial"""
+        # Verificar se já tem assinatura
+        existing = SubscriptionService.get_user_subscription(db, user_id)
+        if existing:
+            raise ValueError("Usuário já possui assinatura")
+            
+        # Criar trial de 7 dias
+        now = datetime.now()
+        trial_end = now + timedelta(days=7)
+        
+        subscription = Assinatura(
+            id=str(uuid.uuid4()),
+            id_usuario=user_id,
+            tipo_plano='basic',
+            status='ACTIVE',
+            asaas_customer_id='trial_customer',
+            periodo_inicio=now,
+            periodo_fim=trial_end,
+            criado_em=now,
+            atualizado_em=now
+        )
+        
+        db.add(subscription)
+        db.commit()
+        db.refresh(subscription)
+        
+        return subscription
+    
+    @staticmethod
+    def process_payment_confirmation(db: Session, payment_data: dict) -> bool:
+        """Processar confirmação de pagamento"""
+        try:
+            # Implementar lógica de confirmação
+            logger.info(f"Pagamento confirmado: {payment_data}")
+            return True
+        except Exception as e:
+            logger.error(f"Erro ao processar confirmação: {str(e)}")
+            return False
+    
+    @staticmethod
+    def process_payment_failure(db: Session, payment_data: dict) -> bool:
+        """Processar falha de pagamento"""
+        try:
+            # Implementar lógica de falha
+            logger.info(f"Pagamento falhou: {payment_data}")
+            return True
+        except Exception as e:
+            logger.error(f"Erro ao processar falha: {str(e)}")
+            return False

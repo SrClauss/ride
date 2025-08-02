@@ -4,6 +4,7 @@ Configurações do sistema
 import os
 from typing import Optional
 from pydantic_settings import BaseSettings
+from pydantic import ConfigDict
 
 class Settings(BaseSettings):
     """Configurações da aplicação"""
@@ -49,9 +50,10 @@ class Settings(BaseSettings):
     ASAAS_WEBHOOK_SECRET: Optional[str] = None
     WEBHOOK_BASE_URL: str = "http://localhost:8000"
     
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
+    model_config = ConfigDict(
+        env_file=".env",
+        case_sensitive=True
+    )
 
 # Instância global das configurações
 settings = Settings()

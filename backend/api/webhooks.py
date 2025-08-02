@@ -9,7 +9,7 @@ import json
 from config.database import get_db
 from services.webhook_handler import WebhookHandler
 
-router = APIRouter(prefix="/webhooks", tags=["Webhooks"])
+router = APIRouter(prefix="/api/webhooks", tags=["Webhooks"])
 
 @router.post("/asaas/payment")
 async def asaas_payment_webhook(

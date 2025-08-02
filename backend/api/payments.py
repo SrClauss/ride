@@ -19,7 +19,7 @@ from schemas.payment_schemas import (
 )
 from utils.auth import get_current_user
 
-router = APIRouter(prefix="/payments", tags=["Pagamentos"])
+router = APIRouter(prefix="/api/payments", tags=["Pagamentos"])
 
 # Instância do serviço Asaas
 asaas_service = AsaasService()
@@ -27,7 +27,7 @@ asaas_service = AsaasService()
 @router.get("/plans")
 async def get_available_plans():
     """Listar planos disponíveis"""
-    from ..config.payments import SUBSCRIPTION_PLANS
+    from config.payments import SUBSCRIPTION_PLANS
     return {"plans": SUBSCRIPTION_PLANS}
 
 @router.post("/customer", status_code=status.HTTP_201_CREATED)
@@ -63,6 +63,67 @@ async def create_customer(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro ao criar cliente: {str(e)}"
+        )
+
+@router.post("/charges", status_code=status.HTTP_201_CREATED)
+async def create_payment(
+    payment_data: CreatePaymentRequest,
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Criar cobrança no Asaas"""
+    try:
+        # Verificar se usuário tem customer_id
+        if not hasattr(current_user, 'asaas_customer_id') or not current_user.asaas_customer_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="É necessário criar conta de pagamento primeiro"
+            )
+        
+        # Criar cobrança no Asaas
+        payment = await asaas_service.create_payment(payment_data.model_dump())
+        
+        return {
+            "payment_id": payment.get("id"),
+            "status": payment.get("status"),
+            "invoice_url": payment.get("invoiceUrl"),
+            "due_date": payment.get("dueDate"),
+            "pix_qr_code": payment.get("qrCode")
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao criar cobrança: {str(e)}"
+        )
+
+@router.get("/charges/{payment_id}")
+async def get_payment_status(
+    payment_id: str,
+    current_user = Depends(get_current_user)
+):
+    """Obter status de pagamento do Asaas"""
+    try:
+        # Obter status do pagamento
+        payment = await asaas_service.get_payment(payment_id)
+        
+        return {
+            "payment_id": payment.get("id"),
+            "status": payment.get("status"),
+            "value": payment.get("value"),
+            "net_value": payment.get("netValue"),
+            "due_date": payment.get("dueDate"),
+            "payment_date": payment.get("paymentDate")
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao obter status do pagamento: {str(e)}"
         )
 
 @router.post("/subscription", response_model=SubscriptionResponse, status_code=status.HTTP_201_CREATED)
@@ -105,7 +166,7 @@ async def create_subscription(
             asaas_subscription_id=asaas_subscription.id
         )
         
-        return SubscriptionResponse.from_orm(subscription)
+        return SubscriptionResponse.model_validate(subscription)
         
     except HTTPException:
         raise
@@ -129,7 +190,7 @@ async def get_current_subscription(
             detail="Usuário não possui assinatura ativa"
         )
     
-    return SubscriptionResponse.from_orm(subscription)
+    return SubscriptionResponse.model_validate(subscription)
 
 @router.get("/subscription/history", response_model=List[SubscriptionResponse])
 async def get_subscription_history(
@@ -138,7 +199,7 @@ async def get_subscription_history(
 ):
     """Obter histórico de assinaturas do usuário"""
     subscriptions = SubscriptionService.get_user_subscriptions(db, current_user.id)
-    return [SubscriptionResponse.from_orm(sub) for sub in subscriptions]
+    return [SubscriptionResponse.model_validate(sub) for sub in subscriptions]
 
 @router.post("/subscription/{subscription_id}/cancel")
 async def cancel_subscription(

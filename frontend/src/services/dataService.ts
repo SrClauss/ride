@@ -12,11 +12,31 @@ import {
   type MockCategory
 } from '../data/mockData'
 import { api } from './api'
+import { Transaction, Category } from '../types'
 
 // Verifica se deve usar mock data
 const useMockData = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'mock'
 
 console.log(`🔧 Data Service: Using ${useMockData ? 'MOCK' : 'API'} data`)
+
+// Interface para dados de criação de transação
+interface CreateTransactionData {
+  tipo: 'receita' | 'despesa'
+  valor: number
+  descricao: string
+  categoria: string
+  data: string
+  id_categoria?: number
+  plataforma?: string
+}
+
+// Interface para dados de criação de categoria  
+interface CreateCategoryData {
+  nome: string
+  tipo: 'receita' | 'despesa'
+  cor: string
+  icone?: string
+}
 
 /**
  * Dashboard Service
@@ -122,7 +142,7 @@ export const transactionService = {
     }
   },
 
-  async createTransaction(transactionData: any): Promise<MockTransaction> {
+  async createTransaction(transactionData: CreateTransactionData): Promise<MockTransaction> {
     if (useMockData) {
       console.log('📊 MOCK: Creating transaction', transactionData)
       await mockApiDelay()
@@ -130,14 +150,14 @@ export const transactionService = {
       const newTransaction: MockTransaction = {
         id: `trans-${Date.now()}`,
         id_usuario: 'user-1',
-        id_categoria: transactionData.id_categoria,
+        id_categoria: transactionData.categoria,
         valor: transactionData.valor,
         descricao: transactionData.descricao,
         tipo: transactionData.tipo,
         data: transactionData.data || new Date().toISOString(),
         origem: 'manual',
         criado_em: new Date().toISOString(),
-        nome_categoria: mockCategories.find(c => c.id === transactionData.id_categoria)?.nome || 'Categoria'
+        nome_categoria: transactionData.categoria
       }
       
       // Simula adicionar à lista de transações mock
@@ -172,7 +192,7 @@ export const categoryService = {
     }
   },
 
-  async createCategory(categoryData: any): Promise<MockCategory> {
+  async createCategory(categoryData: CreateCategoryData): Promise<MockCategory> {
     if (useMockData) {
       console.log('📊 MOCK: Creating category', categoryData)
       await mockApiDelay()

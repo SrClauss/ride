@@ -4,6 +4,8 @@ Configuração base para testes
 import pytest
 import tempfile
 import os
+from datetime import date, timedelta
+from dateutil.relativedelta import relativedelta
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from fastapi.testclient import TestClient
@@ -75,3 +77,127 @@ def sample_transaction_data():
         "tipo": "receita",
         "descricao": "Corrida de teste"
     }
+
+@pytest.fixture
+def sample_goal_data():
+    """Dados de meta para testes"""
+    return {
+        "titulo": "Economizar para férias",
+        "descricao": "Meta para juntar dinheiro para viagem de férias",
+        "valor_objetivo": 5000.0,
+        "data_limite": date.today() + relativedelta(months=6),
+        "tipo": "mensal",
+        "categoria": "receita"
+    }
+
+@pytest.fixture
+def sample_goal_data_variations():
+    """Variações de dados de metas para testes múltiplos"""
+    return [
+        {
+            "titulo": "Economizar para casa",
+            "descricao": "Meta para comprar casa própria",
+            "valor_objetivo": 50000.0,
+            "data_limite": date.today() + relativedelta(years=2),
+            "tipo": "anual",
+            "categoria": "receita"
+        },
+        {
+            "titulo": "Pagar dívida cartão",
+            "descricao": "Meta para quitar dívida do cartão de crédito",
+            "valor_objetivo": 2500.0,
+            "data_limite": date.today() + relativedelta(months=3),
+            "tipo": "mensal",
+            "categoria": "despesa"
+        },
+        {
+            "titulo": "Emergência",
+            "descricao": "Reserva de emergência",
+            "valor_objetivo": 10000.0,
+            "data_limite": date.today() + relativedelta(months=12),
+            "tipo": "semanal",
+            "categoria": "receita"
+        }
+    ]
+
+@pytest.fixture
+def expired_goal_data():
+    """Dados de meta vencida para testes"""
+    return {
+        "titulo": "Meta vencida",
+        "descricao": "Meta que já passou do prazo",
+        "valor_objetivo": 1000.0,
+        "data_limite": date.today() - timedelta(days=30),
+        "tipo": "mensal",
+        "categoria": "receita"
+    }
+
+@pytest.fixture
+def near_deadline_goal_data():
+    """Dados de meta próxima do prazo para testes"""
+    return {
+        "titulo": "Meta próxima do prazo",
+        "descricao": "Meta que está próxima de vencer",
+        "valor_objetivo": 1500.0,
+        "data_limite": date.today() + timedelta(days=3),
+        "tipo": "semanal",
+        "categoria": "receita"
+    }
+
+@pytest.fixture
+def completed_goal_data():
+    """Dados de meta para ser concluída nos testes"""
+    return {
+        "titulo": "Meta para concluir",
+        "descricao": "Meta que será concluída durante o teste",
+        "valor_objetivo": 100.0,  # Valor baixo para facilitar conclusão
+        "data_limite": date.today() + relativedelta(months=1),
+        "tipo": "diaria",
+        "categoria": "receita"
+    }
+
+@pytest.fixture
+def invalid_goal_data_samples():
+    """Samples de dados inválidos para testes de validação"""
+    return [
+        {
+            # Título vazio
+            "titulo": "",
+            "descricao": "Descrição válida",
+            "valor_objetivo": 1000.0,
+            "data_limite": date.today() + relativedelta(months=1),
+            "tipo": "mensal"
+        },
+        {
+            # Valor zero
+            "titulo": "Título válido",
+            "descricao": "Descrição válida",
+            "valor_objetivo": 0.0,
+            "data_limite": date.today() + relativedelta(months=1),
+            "tipo": "mensal"
+        },
+        {
+            # Valor negativo
+            "titulo": "Título válido",
+            "descricao": "Descrição válida",
+            "valor_objetivo": -500.0,
+            "data_limite": date.today() + relativedelta(months=1),
+            "tipo": "mensal"
+        },
+        {
+            # Tipo inválido
+            "titulo": "Título válido",
+            "descricao": "Descrição válida",
+            "valor_objetivo": 1000.0,
+            "data_limite": date.today() + relativedelta(months=1),
+            "tipo": "tipo_inexistente"
+        },
+        {
+            # Data no passado
+            "titulo": "Título válido",
+            "descricao": "Descrição válida",
+            "valor_objetivo": 1000.0,
+            "data_limite": date.today() - timedelta(days=1),
+            "tipo": "mensal"
+        }
+    ]

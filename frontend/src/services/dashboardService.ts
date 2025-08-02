@@ -1,5 +1,29 @@
 import { apiClient } from './api'
 
+// Interfaces para tipagem adequada
+export interface RecentTransaction {
+  id: number
+  descricao: string
+  valor: number
+  tipo: 'receita' | 'despesa'
+  data: string
+  categoria: string
+}
+
+export interface PopularCategory {
+  categoria: string
+  total: number
+  count: number
+  tipo: 'receita' | 'despesa'
+}
+
+export interface TrendData {
+  periodo: string
+  receitas: number
+  despesas: number
+  lucro: number
+}
+
 export interface DashboardData {
   ganhos_hoje: number
   gastos_hoje: number
@@ -16,9 +40,44 @@ export interface DashboardData {
   progresso_meta_diaria?: number
   progresso_meta_semanal?: number
   eficiencia?: number
-  transacoes_recentes: any[]
-  categorias_populares: any[]
-  tendencias: any
+  transacoes_recentes: RecentTransaction[]
+  categorias_populares: PopularCategory[]
+  tendencias: TrendData[]
+}
+
+export interface CategoryData {
+  categoria: string
+  total_receitas: number
+  total_despesas: number
+  lucro: number
+  count_receitas: number
+  count_despesas: number
+}
+
+export interface DailyData {
+  data: string
+  receitas: number
+  despesas: number
+  lucro: number
+  count_transacoes: number
+}
+
+export interface MonthlyData {
+  mes: string
+  ano: number
+  receitas: number
+  despesas: number
+  lucro: number
+  count_transacoes: number
+}
+
+export interface GoalData {
+  id: number
+  titulo: string
+  valor_alvo: number
+  valor_atual: number
+  progresso: number
+  status: string
 }
 
 export interface AnalyticsData {
@@ -30,11 +89,11 @@ export interface AnalyticsData {
     receita_media_por_dia: number
     despesa_media_por_dia: number
   }
-  por_categoria: any[]
-  por_dia: any[]
-  por_mes: any[]
-  tendencias: any
-  metas: any
+  por_categoria: CategoryData[]
+  por_dia: DailyData[]
+  por_mes: MonthlyData[]
+  tendencias: TrendData[]
+  metas: GoalData[]
 }
 
 export const dashboardService = {
