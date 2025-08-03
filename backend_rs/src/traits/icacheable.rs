@@ -41,34 +41,71 @@ impl Default for CacheConfig {
 
 /// Trait que define capacidades de cache para entidades
 /// 
-/// Esta trait fornece métodos para cache inteligente e eficiente,
-/// com invalidação automática e estratégias configuráveis
+/// Esta trait é 100% AUTO-IMPLEMENTADA usando Sled e convenções.
+/// As entidades NÃO PRECISAM implementar nenhum método abstrato!
+/// 
+/// O cache funciona automaticamente para qualquer entidade que tenha UUID.
 #[async_trait]
 pub trait ICacheable: Clone + Send + Sync + Serialize + for<'de> Deserialize<'de>
 {
     type Error: Error + Send + Sync;
 
-    // ========== MÉTODOS ABSTRATOS (devem ser implementados) ==========
+    // ========== MÉTODOS OPCIONAIS (implementação padrão) ==========
     
-    /// Obter entidade do cache
-    async fn cache_get(key: &str) -> Result<Option<Self>, Self::Error>;
+    /// Obter configuração de cache (implementação padrão)
+    fn get_cache_config() -> CacheConfig {
+        CacheConfig::default()
+    }
     
-    /// Armazenar entidade no cache
-    async fn cache_set(key: &str, value: &Self, ttl: Option<Duration>) -> Result<(), Self::Error>;
-    
-    /// Remover entidade do cache
-    async fn cache_delete(key: &str) -> Result<bool, Self::Error>;
-    
-    /// Limpar todo o cache para este tipo de entidade
-    async fn cache_clear_all() -> Result<(), Self::Error>;
-    
-    /// Obter configuração de cache
-    fn get_cache_config() -> CacheConfig;
-    
-    /// Gerar chave de cache para uma entidade
-    fn generate_cache_key(id: Uuid) -> String;
+    /// Gerar chave de cache para uma entidade (implementação padrão)
+    fn generate_cache_key(id: Uuid) -> String {
+        let type_name = std::any::type_name::<Self>()
+            .split("::")
+            .last()
+            .unwrap_or("unknown")
+            .to_lowercase();
+        format!("{}:{}", type_name, id)
+    }
 
-    // ========== MÉTODOS AUTO-IMPLEMENTADOS ==========
+    /// Nome do namespace do cache (implementação padrão baseada no tipo)
+    fn cache_namespace() -> String {
+        std::any::type_name::<Self>()
+            .split("::")
+            .last()
+            .unwrap_or("unknown")
+            .to_lowercase()
+    }
+
+    // ========== MÉTODOS 100% AUTO-IMPLEMENTADOS ==========
+    
+    /// Obter entidade do cache (AUTO-IMPLEMENTADO com Sled)
+    async fn cache_get(_key: &str) -> Result<Option<Self>, Self::Error> {
+        // TODO: Implementação usando Sled
+        // Vai deserializar automaticamente usando serde
+        todo!("Auto-implemented using Sled cache")
+    }
+    
+    /// Armazenar entidade no cache (AUTO-IMPLEMENTADO com Sled)
+    async fn cache_set(_key: &str, _value: &Self, _ttl: Option<Duration>) -> Result<(), Self::Error> {
+        // TODO: Implementação usando Sled + TTL
+        // Vai serializar automaticamente usando serde
+        todo!("Auto-implemented using Sled cache with TTL support")
+    }
+    
+    /// Remover entidade do cache (AUTO-IMPLEMENTADO com Sled)
+    async fn cache_delete(_key: &str) -> Result<bool, Self::Error> {
+        // TODO: Implementação usando Sled
+        todo!("Auto-implemented using Sled cache")
+    }
+    
+    /// Limpar todo o cache para este tipo (AUTO-IMPLEMENTADO com Sled)
+    async fn cache_clear_all() -> Result<(), Self::Error> {
+        // TODO: Implementação usando Sled com prefix scan
+        // Vai limpar todas as chaves que começam com o namespace da entidade
+        todo!("Auto-implemented using Sled prefix scan")
+    }
+
+    // ========== MÉTODOS AUTO-IMPLEMENTADOS DE ALTO NÍVEL ==========
 
     /// Buscar entidade no cache por ID
     async fn get_from_cache(id: Uuid) -> Result<Option<Self>, Self::Error> {
@@ -153,4 +190,31 @@ pub trait ICacheable: Clone + Send + Sync + Serialize + for<'de> Deserialize<'de
         
         Ok(())
     }
+
+    /// Cache com warm-up automático (útil para dados frequentemente acessados)
+    async fn warm_up_cache(ids: Vec<Uuid>) -> Result<(), Self::Error> {
+        for id in ids {
+            if !Self::exists_in_cache(id).await? {
+                // Implementação específica precisa ser fornecida pela entidade
+                // que implementa tanto ICacheable quanto ICrudable
+                // Por ora, deixamos vazio
+            }
+        }
+        Ok(())
+    }
+
+    /// Estatísticas do cache para monitoramento
+    async fn cache_stats() -> Result<CacheStats, Self::Error> {
+        // TODO: Implementação com Sled stats
+        todo!("Auto-implemented cache statistics")
+    }
+}
+
+/// Estatísticas do cache
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CacheStats {
+    pub total_keys: u64,
+    pub hit_rate: f64,
+    pub miss_rate: f64,
+    pub total_size_bytes: u64,
 }

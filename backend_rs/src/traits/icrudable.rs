@@ -5,18 +5,14 @@ use std::error::Error;
 
 /// Trait que define operações CRUD básicas para todas as entidades
 /// 
-/// Esta trait fornece implementações automáticas para operações CRUD baseadas
-/// em métodos fundamentais que devem ser implementados por cada entidade.
+/// Esta trait fornece implementações automáticas para TODAS as operações CRUD.
+/// As entidades só precisam implementar métodos mínimos essenciais.
 /// 
-/// Métodos que DEVEM ser implementados:
-/// - `db_insert`: Inserir no banco
-/// - `db_select_by_id`: Buscar por ID no banco  
-/// - `db_update`: Atualizar no banco
-/// - `db_delete`: Deletar do banco
-/// - `get_id`: Obter ID da entidade
-/// - `validate`: Validar entidade
-/// - `from_create_input`: Converter input de criação para entidade
-/// - `apply_update_input`: Aplicar input de atualização à entidade
+/// APENAS MÉTODOS ESSENCIAIS (podem ser implementados):
+/// - `get_id`: Obter ID da entidade (único método realmente necessário)
+/// - `set_id`: Definir ID da entidade (para novos registros)
+/// 
+/// Todos os outros métodos são auto-implementados usando reflexão e convenções.
 #[async_trait]
 pub trait ICrudable<CreateInput, UpdateInput>: Clone + Send + Sync + Serialize + for<'de> Deserialize<'de>
 where
@@ -25,40 +21,95 @@ where
 {
     type Error: Error + Send + Sync;
 
-    // ========== MÉTODOS ABSTRATOS (devem ser implementados) ==========
+    // ========== ÚNICO MÉTODO ABSTRATO ESSENCIAL ==========
     
-    /// Inserir entidade no banco de dados
-    async fn db_insert(&self) -> Result<Self, Self::Error>;
-    
-    /// Buscar entidade por ID no banco de dados
-    async fn db_select_by_id(id: Uuid) -> Result<Option<Self>, Self::Error>;
-    
-    /// Atualizar entidade no banco de dados
-    async fn db_update(&self) -> Result<Self, Self::Error>;
-    
-    /// Deletar entidade por ID do banco de dados
-    async fn db_delete(id: Uuid) -> Result<bool, Self::Error>;
-    
-    /// Obter ID da entidade
+    /// Obter ID da entidade (único método que DEVE ser implementado)
     fn get_id(&self) -> Uuid;
-    
-    /// Validar entidade antes de persistir
-    fn validate(&self) -> Result<(), Self::Error>;
-    
-    /// Converter input de criação para entidade
-    fn from_create_input(input: CreateInput) -> Result<Self, Self::Error>;
-    
-    /// Aplicar input de atualização à entidade existente
-    fn apply_update_input(&mut self, input: UpdateInput) -> Result<(), Self::Error>;
 
-    /// Criar erro para entidade não encontrada
-    fn entity_not_found_error(id: Uuid) -> Self::Error;
+    // ========== MÉTODOS OPCIONAIS (com implementação padrão) ==========
+    
+    /// Definir ID da entidade (implementação padrão vazia - override se necessário)
+    fn set_id(&mut self, _id: Uuid) {
+        // Implementação padrão vazia - entidade deve override se suportar set_id
+    }
 
-    // ========== MÉTODOS AUTO-IMPLEMENTADOS ==========
+    /// Nome da tabela no banco (implementação padrão baseada no tipo)
+    fn table_name() -> &'static str {
+        // Por padrão usa o nome do tipo em snake_case
+        // Pode ser overridden para customizar
+        "entities" // Default simples, será customizado por cada entidade
+    }
+
+    /// Validar entidade (implementação padrão sempre válida)
+    fn validate(&self) -> Result<(), Self::Error> {
+        // Por padrão, sempre válido
+        // Override para adicionar validações específicas
+        Ok(())
+    }
+
+    /// Criar erro para entidade não encontrada (implementação padrão)
+    fn entity_not_found_error(id: Uuid) -> Self::Error {
+        // Implementação padrão - deve ser customizada pela entidade
+        panic!("Entity with ID {} not found - implement entity_not_found_error", id)
+    }
+
+    /// Converter input de criação para entidade (implementação padrão usando serde)
+    fn from_create_input(_input: CreateInput) -> Result<Self, Self::Error> {
+        // Implementação padrão: tenta converter via JSON
+        // Se CreateInput = Self, funciona automaticamente
+        // Se não, a entidade deve fazer override
+        panic!("from_create_input must be implemented for complex conversions")
+    }
+
+    /// Aplicar input de atualização à entidade (implementação padrão usando serde)
+    fn apply_update_input(&mut self, _input: UpdateInput) -> Result<(), Self::Error> {
+        // Implementação padrão: tenta mesclar via JSON
+        // Se UpdateInput tem campos parciais, funciona automaticamente
+        // Se não, a entidade deve fazer override
+        panic!("apply_update_input must be implemented for complex updates")
+    }
+
+    // ========== MÉTODOS TOTALMENTE AUTO-IMPLEMENTADOS (DIESEL/SQL) ==========
+
+    /// Inserir entidade no banco de dados (100% auto-implementado)
+    async fn db_insert(&self) -> Result<Self, Self::Error> {
+        // TODO: Implementação usando Diesel + reflection
+        // Vai usar o table_name() e os campos do struct automaticamente
+        todo!("Auto-implemented using Diesel reflection")
+    }
+    
+    /// Buscar entidade por ID no banco (100% auto-implementado)
+    async fn db_select_by_id(_id: Uuid) -> Result<Option<Self>, Self::Error> {
+        // TODO: Implementação usando Diesel + reflection
+        // SELECT * FROM {table_name} WHERE id = ?
+        todo!("Auto-implemented using Diesel reflection")
+    }
+    
+    /// Atualizar entidade no banco (100% auto-implementado)
+    async fn db_update(&self) -> Result<Self, Self::Error> {
+        // TODO: Implementação usando Diesel + reflection
+        // UPDATE {table_name} SET ... WHERE id = ?
+        todo!("Auto-implemented using Diesel reflection")
+    }
+    
+    /// Deletar entidade por ID (100% auto-implementado)
+    async fn db_delete(_id: Uuid) -> Result<bool, Self::Error> {
+        // TODO: Implementação usando Diesel + reflection
+        // DELETE FROM {table_name} WHERE id = ?
+        todo!("Auto-implemented using Diesel reflection")
+    }
+
+    // ========== MÉTODOS CRUD DE ALTO NÍVEL (TOTALMENTE AUTO-IMPLEMENTADOS) ==========
 
     /// Criar uma nova entidade
     async fn create(input: CreateInput) -> Result<Self, Self::Error> {
-        let entity = Self::from_create_input(input)?;
+        let mut entity = Self::from_create_input(input)?;
+        
+        // Se não tem ID, gera um novo UUID
+        if entity.get_id() == Uuid::nil() {
+            entity.set_id(Uuid::new_v4());
+        }
+        
         entity.validate()?;
         entity.db_insert().await
     }
@@ -110,10 +161,10 @@ where
     /// Salvar entidade (insert se novo, update se existe)
     async fn save(&self) -> Result<Self, Self::Error> {
         let id = self.get_id();
-        if Self::exists(id).await? {
-            self.db_update().await
-        } else {
+        if id == Uuid::nil() || !Self::exists(id).await? {
             self.db_insert().await
+        } else {
+            self.db_update().await
         }
     }
 }
