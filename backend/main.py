@@ -20,6 +20,7 @@ from api.categories import router as categories_router
 from api.transactions import router as transactions_router
 from api.payments import router as payments_router
 from api.webhooks import router as webhooks_router
+from api.goals import router as goals_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -127,6 +128,7 @@ app.include_router(categories_router)
 app.include_router(transactions_router)
 app.include_router(payments_router)
 app.include_router(webhooks_router)
+app.include_router(goals_router)
 
 # Rota de health check
 @app.get("/health")

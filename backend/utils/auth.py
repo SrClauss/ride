@@ -56,6 +56,14 @@ class JWTHandler:
         if payload:
             return payload.get("type") == expected_type
         return False
+    
+    @staticmethod
+    def get_user_id_from_token(token: str) -> Optional[str]:
+        """Extrair ID do usuário do token JWT"""
+        payload = JWTHandler.decode_token(token)
+        if payload and payload.get("type") == "access":
+            return payload.get("sub")
+        return None
 
 class PasswordHandler:
     """Classe para manipulação de senhas"""

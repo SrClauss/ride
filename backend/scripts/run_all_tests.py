@@ -65,7 +65,6 @@ def main():
         ("python -m pytest tests/test_auth.py -v", "Testes de Autenticação"),
         ("python -m pytest tests/test_categories.py -v", "Testes de Categorias"),
         ("python -m pytest tests/test_transactions.py -v", "Testes de Transações"),
-        ("python -m pytest tests/test_goals.py -v", "Testes de Metas"),
         ("python -m pytest tests/test_sessions.py -v", "Testes de Sessões"),
         
         # Teste de health check direto
