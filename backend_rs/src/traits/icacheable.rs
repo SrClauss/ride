@@ -1,174 +1,156 @@
 use async_trait::async_trait;
+use uuid::Uuid;
 use serde::{Deserialize, Serialize};
 use std::error::Error;
 use std::time::Duration;
-use uuid::Uuid;
 
 /// Estratégias de invalidação de cache
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum CacheInvalidationStrategy {
-    /// Invalidação por tempo (TTL)
-    TimeToLive(Duration),
-    /// Invalidação manual
+    /// Invalidar imediatamente após atualização
+    Immediate,
+    /// Invalidar após um tempo específico (TTL)
+    TTL(Duration),
+    /// Invalidar manualmente
     Manual,
-    /// Invalidação por tags
-    Tagged(Vec<String>),
-    /// Invalidação em cascata (quando entidades relacionadas mudam)
-    Cascade(Vec<String>),
 }
 
-/// Configuração de cache para uma entidade
-#[derive(Debug, Clone)]
+/// Configuração de cache para entidades
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CacheConfig {
-    /// TTL padrão para entidades desta tipo
+    /// Tempo de vida padrão no cache
     pub default_ttl: Duration,
     /// Estratégia de invalidação
     pub invalidation_strategy: CacheInvalidationStrategy,
-    /// Prefixo das chaves no cache
+    /// Tamanho máximo do cache
+    pub max_size: usize,
+    /// Prefixo para chaves de cache
     pub key_prefix: String,
-    /// Se deve fazer cache de consultas (além de entidades individuais)
-    pub cache_queries: bool,
-    /// TTL específico para cache de consultas
-    pub query_cache_ttl: Duration,
 }
 
 impl Default for CacheConfig {
     fn default() -> Self {
         Self {
             default_ttl: Duration::from_secs(300), // 5 minutos
-            invalidation_strategy: CacheInvalidationStrategy::TimeToLive(Duration::from_secs(300)),
-            key_prefix: "entity".to_string(),
-            cache_queries: true,
-            query_cache_ttl: Duration::from_secs(60), // 1 minuto para queries
+            invalidation_strategy: CacheInvalidationStrategy::TTL(Duration::from_secs(300)),
+            max_size: 1000,
+            key_prefix: "default".to_string(),
         }
     }
 }
 
 /// Trait que define capacidades de cache para entidades
 /// 
-/// Esta trait permite cache inteligente com diferentes estratégias de invalidação
+/// Esta trait fornece métodos para cache inteligente e eficiente,
+/// com invalidação automática e estratégias configuráveis
 #[async_trait]
-pub trait ICacheable<T>
-where
-    T: Clone + Send + Sync + Serialize + for<'de> Deserialize<'de>,
+pub trait ICacheable: Clone + Send + Sync + Serialize + for<'de> Deserialize<'de>
 {
     type Error: Error + Send + Sync;
 
-    /// Configuração de cache para esta entidade
-    fn cache_config() -> CacheConfig;
+    // ========== MÉTODOS ABSTRATOS (devem ser implementados) ==========
+    
+    /// Obter entidade do cache
+    async fn cache_get(key: &str) -> Result<Option<Self>, Self::Error>;
+    
+    /// Armazenar entidade no cache
+    async fn cache_set(key: &str, value: &Self, ttl: Option<Duration>) -> Result<(), Self::Error>;
+    
+    /// Remover entidade do cache
+    async fn cache_delete(key: &str) -> Result<bool, Self::Error>;
+    
+    /// Limpar todo o cache para este tipo de entidade
+    async fn cache_clear_all() -> Result<(), Self::Error>;
+    
+    /// Obter configuração de cache
+    fn get_cache_config() -> CacheConfig;
+    
+    /// Gerar chave de cache para uma entidade
+    fn generate_cache_key(id: Uuid) -> String;
 
-    /// Gerar chave de cache para uma entidade específica
-    fn cache_key(id: Uuid) -> String {
-        format!("{}:{}", Self::cache_config().key_prefix, id)
+    // ========== MÉTODOS AUTO-IMPLEMENTADOS ==========
+
+    /// Buscar entidade no cache por ID
+    async fn get_from_cache(id: Uuid) -> Result<Option<Self>, Self::Error> {
+        let key = Self::generate_cache_key(id);
+        Self::cache_get(&key).await
     }
-
-    /// Gerar chave de cache para consultas
-    fn query_cache_key(query_hash: &str) -> String {
-        format!("{}:query:{}", Self::cache_config().key_prefix, query_hash)
-    }
-
-    /// Gerar chave para cache de contagem
-    fn count_cache_key(query_hash: &str) -> String {
-        format!("{}:count:{}", Self::cache_config().key_prefix, query_hash)
-    }
-
-    /// Buscar entidade no cache
-    async fn get_from_cache(id: Uuid) -> Result<Option<T>, Self::Error>;
 
     /// Armazenar entidade no cache
-    async fn set_in_cache(id: Uuid, entity: &T) -> Result<(), Self::Error>;
+    async fn store_in_cache(&self, id: Uuid) -> Result<(), Self::Error> {
+        let key = Self::generate_cache_key(id);
+        let config = Self::get_cache_config();
+        Self::cache_set(&key, self, Some(config.default_ttl)).await
+    }
 
-    /// Armazenar entidade no cache com TTL customizado
-    async fn set_in_cache_with_ttl(
-        id: Uuid,
-        entity: &T,
-        ttl: Duration,
-    ) -> Result<(), Self::Error>;
+    /// Invalidar entidade do cache
+    async fn invalidate_cache(id: Uuid) -> Result<bool, Self::Error> {
+        let key = Self::generate_cache_key(id);
+        Self::cache_delete(&key).await
+    }
 
-    /// Remover entidade específica do cache
-    async fn invalidate_cache(id: Uuid) -> Result<(), Self::Error>;
+    /// Invalidar múltiplas entidades do cache
+    async fn invalidate_multiple_cache(ids: Vec<Uuid>) -> Result<Vec<bool>, Self::Error> {
+        let mut results = Vec::new();
+        for id in ids {
+            let result = Self::invalidate_cache(id).await?;
+            results.push(result);
+        }
+        Ok(results)
+    }
 
-    /// Invalidar cache por padrão (ex: todos os usuários)
-    async fn invalidate_cache_pattern(pattern: &str) -> Result<(), Self::Error>;
+    /// Verificar se entidade existe no cache
+    async fn exists_in_cache(id: Uuid) -> Result<bool, Self::Error> {
+        let cached = Self::get_from_cache(id).await?;
+        Ok(cached.is_some())
+    }
 
-    /// Invalidar cache por tags
-    async fn invalidate_cache_by_tags(tags: Vec<String>) -> Result<(), Self::Error>;
+    /// Atualizar entidade no cache (se existe)
+    async fn update_cache(&self, id: Uuid) -> Result<(), Self::Error> {
+        if Self::exists_in_cache(id).await? {
+            self.store_in_cache(id).await?;
+        }
+        Ok(())
+    }
 
-    /// Limpar todo o cache desta entidade
-    async fn clear_all_cache() -> Result<(), Self::Error>;
-
-    /// Cache de consulta (armazenar resultado de queries)
-    async fn get_query_from_cache(query_hash: &str) -> Result<Option<Vec<T>>, Self::Error>;
-
-    /// Armazenar resultado de consulta no cache
-    async fn set_query_in_cache(
-        query_hash: &str,
-        results: &[T],
-    ) -> Result<(), Self::Error>;
-
-    /// Cache de contagem
-    async fn get_count_from_cache(query_hash: &str) -> Result<Option<u64>, Self::Error>;
-
-    /// Armazenar contagem no cache
-    async fn set_count_in_cache(
-        query_hash: &str,
-        count: u64,
-    ) -> Result<(), Self::Error>;
-
-    /// Invalidar cache de queries relacionadas
-    async fn invalidate_query_cache() -> Result<(), Self::Error>;
-
-    /// Método utilitário para buscar com cache automático
-    async fn find_with_cache(id: Uuid) -> Result<Option<T>, <Self as super::icrudable::ICrudable<T, (), ()>>::Error>
+    /// Obter ou armazenar no cache (cache-aside pattern)
+    async fn get_or_cache<F, Fut>(id: Uuid, fallback: F) -> Result<Self, Self::Error>
     where
-        Self: super::icrudable::ICrudable<T, (), ()>,
+        F: FnOnce() -> Fut + Send,
+        Fut: std::future::Future<Output = Result<Self, Self::Error>> + Send,
     {
         // Tenta buscar no cache primeiro
-        if let Ok(Some(cached)) = Self::get_from_cache(id).await {
-            return Ok(Some(cached));
+        if let Some(cached) = Self::get_from_cache(id).await? {
+            return Ok(cached);
         }
 
-        // Se não encontrou no cache, busca no banco
-        let entity = Self::find_by_id(id).await?;
-
-        // Se encontrou, armazena no cache
-        if let Some(ref entity_data) = entity {
-            let _ = Self::set_in_cache(id, entity_data).await;
-        }
-
+        // Se não estiver no cache, executa fallback
+        let entity = fallback().await?;
+        
+        // Armazena no cache para próximas consultas
+        entity.store_in_cache(id).await?;
+        
         Ok(entity)
     }
 
-    /// Atualizar entidade e invalidar cache relacionado
-    async fn update_and_invalidate_cache(
-        id: Uuid,
-        update_fn: impl FnOnce() -> Result<T, <Self as super::icrudable::ICrudable<T, (), ()>>::Error> + Send,
-    ) -> Result<T, <Self as super::icrudable::ICrudable<T, (), ()>>::Error>
-    where
-        Self: super::icrudable::ICrudable<T, (), ()>,
-    {
-        // Executa a atualização
-        let updated_entity = update_fn()?;
-
-        // Invalida o cache da entidade específica
-        let _ = Self::invalidate_cache(id).await;
-
-        // Invalida cache de queries relacionadas
-        let _ = Self::invalidate_query_cache().await;
-
-        // Armazena a versão atualizada no cache
-        let _ = Self::set_in_cache(id, &updated_entity).await;
-
-        Ok(updated_entity)
-    }
-
-    /// Gerar hash para query (usado como chave de cache)
-    fn generate_query_hash(query_data: &str) -> String {
-        use std::collections::hash_map::DefaultHasher;
-        use std::hash::{Hash, Hasher};
-
-        let mut hasher = DefaultHasher::new();
-        query_data.hash(&mut hasher);
-        format!("{:x}", hasher.finish())
+    /// Invalidar cache baseado na estratégia configurada
+    async fn smart_invalidate(&self, id: Uuid) -> Result<(), Self::Error> {
+        let config = Self::get_cache_config();
+        
+        match config.invalidation_strategy {
+            CacheInvalidationStrategy::Immediate => {
+                Self::invalidate_cache(id).await?;
+            }
+            CacheInvalidationStrategy::Manual => {
+                // Não invalida automaticamente
+            }
+            CacheInvalidationStrategy::TTL(_) => {
+                // TTL é tratado automaticamente pelo cache
+                // Apenas atualiza com novo TTL
+                self.store_in_cache(id).await?;
+            }
+        }
+        
+        Ok(())
     }
 }

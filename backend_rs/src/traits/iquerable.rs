@@ -16,7 +16,6 @@ pub enum SortOrder {
 pub struct PaginationParams {
     pub page: u32,
     pub per_page: u32,
-    pub max_per_page: u32,
 }
 
 impl Default for PaginationParams {
@@ -24,7 +23,6 @@ impl Default for PaginationParams {
         Self {
             page: 1,
             per_page: 10,
-            max_per_page: 100,
         }
     }
 }
@@ -32,7 +30,7 @@ impl Default for PaginationParams {
 /// Resultado paginado
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PaginatedResult<T> {
-    pub items: Vec<T>,
+    pub data: Vec<T>,
     pub total_count: u64,
     pub page: u32,
     pub per_page: u32,
@@ -79,61 +77,84 @@ impl Default for QueryFilters {
 
 /// Trait que define capacidades avançadas de consulta para entidades
 /// 
-/// Esta trait permite consultas complexas, filtros, ordenação e paginação
+/// Esta trait fornece métodos padronizados para buscar, filtrar,
+/// paginar e ordenar entidades de forma eficiente e consistente
 #[async_trait]
-pub trait IQuerable<T>
-where
-    T: Clone + Send + Sync + Serialize + for<'de> Deserialize<'de>,
+pub trait IQuerable: Clone + Send + Sync + Serialize + for<'de> Deserialize<'de>
 {
     type Error: Error + Send + Sync;
 
-    /// Buscar todas as entidades (sem filtros)
-    async fn find_all() -> Result<Vec<T>, Self::Error>;
-
-    /// Buscar entidades com filtros simples
-    async fn find_by_field(field: &str, value: serde_json::Value) -> Result<Vec<T>, Self::Error>;
-
-    /// Consulta avançada com filtros, ordenação e paginação
-    async fn query(
-        filters: QueryFilters,
-        sort_by: Option<String>,
-        sort_order: Option<SortOrder>,
+    // ========== MÉTODOS ABSTRATOS (devem ser implementados) ==========
+    
+    /// Buscar todas as entidades com filtros, paginação e ordenação
+    async fn db_find_all(
+        filters: Option<QueryFilters>,
         pagination: Option<PaginationParams>,
-    ) -> Result<PaginatedResult<T>, Self::Error>;
-
+        sort: Option<SortOrder>
+    ) -> Result<PaginatedResult<Self>, Self::Error>;
+    
     /// Contar entidades que atendem aos filtros
-    async fn count(filters: QueryFilters) -> Result<u64, Self::Error>;
+    async fn db_count(filters: Option<QueryFilters>) -> Result<u64, Self::Error>;
+    
+    /// Buscar entidades por IDs específicos
+    async fn db_find_by_ids(ids: Vec<Uuid>) -> Result<Vec<Self>, Self::Error>;
 
-    /// Buscar entidades por múltiplos IDs
-    async fn find_by_ids(ids: Vec<Uuid>) -> Result<Vec<T>, Self::Error>;
+    // ========== MÉTODOS AUTO-IMPLEMENTADOS ==========
 
-    /// Buscar entidades por campo de referência (ex: user_id)
-    async fn find_by_reference(
-        reference_field: &str,
-        reference_id: Uuid,
-    ) -> Result<Vec<T>, Self::Error>;
+    /// Buscar todas as entidades (sem filtros)
+    async fn find_all() -> Result<Vec<Self>, Self::Error> {
+        let result = Self::db_find_all(None, None, None).await?;
+        Ok(result.data)
+    }
 
-    /// Buscar primeira entidade que atende aos critérios
-    async fn find_first(filters: QueryFilters) -> Result<Option<T>, Self::Error>;
-
-    /// Verificar se existe alguma entidade que atende aos critérios
-    async fn exists_with_criteria(filters: QueryFilters) -> Result<bool, Self::Error>;
-
-    /// Busca paginada simples (sem filtros complexos)
+    /// Buscar com paginação
     async fn find_paginated(
         page: u32,
-        per_page: u32,
-    ) -> Result<PaginatedResult<T>, Self::Error> {
-        Self::query(
-            QueryFilters::default(),
-            None,
-            None,
-            Some(PaginationParams {
-                page,
-                per_page,
-                max_per_page: 100,
-            }),
-        )
-        .await
+        per_page: u32
+    ) -> Result<PaginatedResult<Self>, Self::Error> {
+        let pagination = PaginationParams { page, per_page };
+        Self::db_find_all(None, Some(pagination), None).await
+    }
+
+    /// Buscar com filtros
+    async fn find_filtered(filters: QueryFilters) -> Result<Vec<Self>, Self::Error> {
+        let result = Self::db_find_all(Some(filters), None, None).await?;
+        Ok(result.data)
+    }
+
+    /// Buscar com ordenação
+    async fn find_sorted(sort: SortOrder) -> Result<Vec<Self>, Self::Error> {
+        let result = Self::db_find_all(None, None, Some(sort)).await?;
+        Ok(result.data)
+    }
+
+    /// Buscar com todos os parâmetros
+    async fn find_with_params(
+        filters: Option<QueryFilters>,
+        pagination: Option<PaginationParams>,
+        sort: Option<SortOrder>
+    ) -> Result<PaginatedResult<Self>, Self::Error> {
+        Self::db_find_all(filters, pagination, sort).await
+    }
+
+    /// Contar total de entidades
+    async fn count_all() -> Result<u64, Self::Error> {
+        Self::db_count(None).await
+    }
+
+    /// Contar entidades com filtros
+    async fn count_filtered(filters: QueryFilters) -> Result<u64, Self::Error> {
+        Self::db_count(Some(filters)).await
+    }
+
+    /// Buscar por múltiplos IDs
+    async fn find_by_ids(ids: Vec<Uuid>) -> Result<Vec<Self>, Self::Error> {
+        Self::db_find_by_ids(ids).await
+    }
+
+    /// Verificar se existem entidades que atendem aos filtros
+    async fn exists_with_filters(filters: QueryFilters) -> Result<bool, Self::Error> {
+        let count = Self::db_count(Some(filters)).await?;
+        Ok(count > 0)
     }
 }
