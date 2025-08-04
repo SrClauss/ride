@@ -34,7 +34,7 @@ const menuItems = [
   { icon: TransactionsIcon, text: 'Transações', path: '/transactions' },
   { icon: AnalyticsIcon, text: 'Relatórios', path: '/analytics' },
   { icon: GoalsIcon, text: 'Metas', path: '/goals' },
-  { icon: ProfileIcon, text: 'Perfil', path: '/profile' },
+  { icon: ProfileIcon, text: 'Perfil', path: '/perfil' },
   { icon: SettingsIcon, text: 'Configurações', path: '/settings' },
 ]
 

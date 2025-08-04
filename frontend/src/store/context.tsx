@@ -51,14 +51,22 @@ export function AppProvider({ children }: AppProviderProps) {
 
   // Função de logout
   const logout = useCallback(() => {
+    console.log('🔥 Context logout chamado - removendo tokens')
     if (typeof window !== 'undefined') {
       localStorage.removeItem('authToken')
       localStorage.removeItem('userData')
       localStorage.removeItem('tempUserId')
       localStorage.removeItem('pendingPaymentUserId')
+      console.log('🔥 Tokens removidos do localStorage')
+      
+      // Disparar evento customizado para notificar o AuthWrapper
+      console.log('🔥 Disparando evento logout customizado')
+      window.dispatchEvent(new CustomEvent('logout'))
     }
     
+    console.log('🔥 Disparando logout action no reducer')
     dispatch(actionCreators.logout())
+    console.log('🔥 Logout completo')
   }, [dispatch])
 
   // Verificar status de autenticação

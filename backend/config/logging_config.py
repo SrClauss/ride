@@ -31,10 +31,23 @@ def setup_logging():
     # Logger específico para a aplicação
     logger = logging.getLogger("rider_finance")
     
-    # Logger para SQLAlchemy (menos verboso)
+    # Silenciar logs desnecessários
     logging.getLogger("sqlalchemy.engine").setLevel(
         logging.INFO if settings.DEBUG else logging.WARNING
     )
+    
+    # Silenciar logs de watchfiles (muito verbosos)
+    logging.getLogger("watchfiles.main").setLevel(logging.WARNING)
+    
+    # Silenciar logs de passlib (debug muito verboso)
+    logging.getLogger("passlib").setLevel(logging.INFO)
+    
+    # Silenciar logs de httpcore/httpx (muito verbosos)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
+    logging.getLogger("httpx").setLevel(logging.INFO)
+    
+    # Silenciar logs de asyncio (debug desnecessário)
+    logging.getLogger("asyncio").setLevel(logging.WARNING)
     
     return logger
 

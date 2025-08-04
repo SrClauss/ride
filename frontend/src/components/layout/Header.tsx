@@ -41,7 +41,30 @@ export default function Header() {
   }
 
   const handleLogout = () => {
-    dispatch(actions.logout())
+    console.log('🔥 LOGOUT INICIADO')
+    
+    try {
+      // 1. Chamar o logout do context primeiro
+      dispatch(actions.logout())
+      console.log('🔥 Context logout chamado')
+      
+      // 2. Aguardar um pouco e forçar limpeza completa
+      setTimeout(() => {
+        localStorage.clear()
+        console.log('🔥 localStorage limpo')
+        
+        // 3. Forçar redirect usando window.location
+        window.location.replace('/auth')
+        console.log('🔥 Redirecionamento forçado')
+      }, 100)
+      
+    } catch (error) {
+      console.error('🔥 Erro no logout:', error)
+      // Fallback: limpeza manual e redirect
+      localStorage.clear()
+      window.location.replace('/auth')
+    }
+    
     handleMenuClose()
   }
 

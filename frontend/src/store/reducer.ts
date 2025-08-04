@@ -64,6 +64,7 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       }
     
     case 'LOGOUT':
+      console.log('🔥 Reducer LOGOUT action executada - resetando estado')
       return {
         ...state,
         user: null,

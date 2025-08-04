@@ -2,7 +2,13 @@ import axios, { AxiosInstance, AxiosResponse, AxiosError } from 'axios'
 import { ApiResponse, ErrorData, RequestParams } from '../types'
 
 // Configuração base da API
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api'
+
+console.log('🔧 API Configuration:', {
+  NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
+  API_BASE_URL,
+  NODE_ENV: process.env.NODE_ENV
+})
 
 // Criar instância do Axios
 export const api: AxiosInstance = axios.create({

@@ -2,6 +2,7 @@
 Serviço de usuários
 """
 from typing import Optional, List, Dict, Any
+from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 
@@ -26,7 +27,9 @@ class UserService:
         db: Session,
         user: Usuario,
         nome_completo: Optional[str] = None,
-        telefone: Optional[str] = None
+        telefone: Optional[str] = None,
+        veiculo: Optional[str] = None,
+        data_inicio_atividade: Optional[datetime] = None
     ) -> Usuario:
         """Atualiza perfil do usuário"""
         
@@ -35,6 +38,12 @@ class UserService:
         
         if telefone is not None:
             user.telefone = telefone
+            
+        if veiculo is not None:
+            user.veiculo = veiculo
+            
+        if data_inicio_atividade is not None:
+            user.data_inicio_atividade = data_inicio_atividade.date() if isinstance(data_inicio_atividade, datetime) else data_inicio_atividade
         
         user.atualizado_em = now_utc()
         

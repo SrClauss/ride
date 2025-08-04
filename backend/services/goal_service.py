@@ -20,50 +20,26 @@ class GoalService:
     def create_goal(db: Session, user_id: str, goal_data: MetaCreate) -> Dict[str, Any]:
         """Criar uma nova meta"""
         try:
-            logger.info(f"Criando meta '{goal_data.nome}' para usuário {user_id}")
+            logger.info(f"Criando meta '{goal_data.title}' para usuário {user_id}")
             
             # Validações adicionais
-            if goal_data.data_limite and goal_data.data_limite <= datetime.now():
-                raise ValidationError("Data limite deve ser no futuro")
+            if goal_data.deadline and goal_data.deadline <= datetime.now():
+                raise ValidationError("Deadline deve ser no futuro")
             
-            # Mapear enums para valores do modelo legado
-            tipo_map = {
-                "economia": "mensal",
-                "gasto": "mensal", 
-                "receita": "mensal"
-            }
-            
-            # Mapear categoria baseando no tipo e categoria
-            if goal_data.tipo.value == "gasto":
-                categoria_value = "despesas"
-            elif goal_data.tipo.value in ["economia", "receita"]:
-                categoria_value = "receita"
-            else:
-                categoria_map = {
-                    "emergencia": "receita",
-                    "lazer": "receita",
-                    "educacao": "receita",
-                    "saude": "receita",
-                    "transporte": "despesas",
-                    "alimentacao": "despesas",
-                    "moradia": "despesas",
-                    "investimento": "receita",
-                    "dividas": "despesas",
-                    "outros": "receita"
-                }
-                categoria_value = categoria_map.get(goal_data.categoria.value, "receita")
+            # A categoria já vem no formato correto do enum
+            categoria_value = goal_data.category.value
             
             # Mapear dados para o modelo existente
             meta = Meta(
                 id_usuario=user_id,
-                titulo=goal_data.nome,
-                descricao=goal_data.descricao,
-                tipo=tipo_map.get(goal_data.tipo.value, "mensal"),
+                titulo=goal_data.title,
+                descricao=goal_data.description,
+                tipo="mensal",  # Padrão para todas as metas
                 categoria=categoria_value,
-                valor_alvo=float(goal_data.valor_alvo),
-                valor_atual=float(goal_data.valor_inicial or Decimal("0.00")),
+                valor_alvo=float(goal_data.targetValue),
+                valor_atual=float(goal_data.currentValue or Decimal("0.00")),
                 data_inicio=datetime.now(),
-                data_fim=goal_data.data_limite,
+                data_fim=goal_data.deadline,
                 unidade="BRL"
             )
             
@@ -73,7 +49,7 @@ class GoalService:
             
             logger.info(f"Meta '{meta.titulo}' criada com ID {meta.id}")
             
-            return GoalService._meta_to_dict(meta, goal_data.tipo, goal_data.categoria)
+            return GoalService._meta_to_dict(meta, categoria_meta=goal_data.category)
             
         except ValidationError:
             db.rollback()
@@ -203,16 +179,16 @@ class GoalService:
                 raise NotFoundError(f"Meta com ID {goal_id} não encontrada")
             
             # Mapear campos do schema para o modelo
-            if goal_data.nome is not None:
-                meta.titulo = goal_data.nome
-            if goal_data.descricao is not None:
-                meta.descricao = goal_data.descricao
-            if goal_data.categoria is not None:
-                meta.categoria = goal_data.categoria.value
-            if goal_data.valor_alvo is not None:
-                meta.valor_alvo = float(goal_data.valor_alvo)
-            if goal_data.data_limite is not None:
-                meta.data_fim = goal_data.data_limite
+            if goal_data.title is not None:
+                meta.titulo = goal_data.title
+            if goal_data.description is not None:
+                meta.descricao = goal_data.description
+            if goal_data.category is not None:
+                meta.categoria = goal_data.category.value
+            if goal_data.targetValue is not None:
+                meta.valor_alvo = float(goal_data.targetValue)
+            if goal_data.deadline is not None:
+                meta.data_fim = goal_data.deadline
             
             # Validações adicionais
             if meta.data_fim and meta.data_fim <= datetime.now():
@@ -319,31 +295,19 @@ class GoalService:
 
     @staticmethod
     def _meta_to_dict(meta: Meta, tipo_meta: Optional[TipoMeta] = None, categoria_meta: Optional[CategoriaMeta] = None) -> Dict[str, Any]:
-        """Converter Meta para dicionário compatível com schemas"""
-        # Mapeamento reverso categoria -> tipo
-        if not tipo_meta:
-            if meta.categoria == "despesas":
-                tipo_display = "gasto"
-            elif meta.categoria == "receita":
-                tipo_display = "economia"  # Default para receita
-            else:
-                tipo_display = "economia"
-        else:
-            tipo_display = tipo_meta.value
-            
+        """Converter Meta para dicionário compatível com frontend"""
         return {
             "id": str(meta.id),
             "user_id": str(meta.id_usuario),
-            "nome": meta.titulo,
-            "descricao": meta.descricao,
-            "tipo": tipo_display,
-            "categoria": categoria_meta.value if categoria_meta else meta.categoria,
-            "valor_alvo": Decimal(str(meta.valor_alvo)),
-            "valor_atual": Decimal(str(meta.valor_atual)),
-            "percentual_progresso": meta.progresso_percentual,
-            "meta_atingida": meta.eh_concluida,
-            "ativa": meta.eh_ativa,
-            "data_limite": meta.data_fim,
+            "title": meta.titulo,
+            "description": meta.descricao,
+            "category": categoria_meta.value if categoria_meta else meta.categoria,
+            "targetValue": Decimal(str(meta.valor_alvo)),
+            "currentValue": Decimal(str(meta.valor_atual)),
+            "progressPercentage": meta.progresso_percentual,
+            "isCompleted": meta.eh_concluida,
+            "status": "completed" if meta.eh_concluida else ("active" if meta.eh_ativa else "paused"),
+            "deadline": meta.data_fim,
             "created_at": meta.criado_em,
             "updated_at": meta.atualizado_em
         }

@@ -29,24 +29,31 @@ import {
 } from '@mui/icons-material'
 import { useApp } from '../../store/context'
 import { useDashboardData } from '../../hooks/useDashboardApi'
-import { useTransactionsData } from '../../hooks/useTransactionsApi'
-import { Transaction } from '../../hooks/useTransactionsApi'
-import { getCurrentDataSource } from '../../services/dataService'
+import { useRecentTransactions } from '../../hooks/useTransactionsApi'
+import { useCategoriesData } from '../../hooks/useCategoriesApi'
+
+// Função para formatar moeda
+const formatCurrency = (value: number | null | undefined): string => {
+  if (value === null || value === undefined) return 'R$ 0,00'
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL'
+  }).format(value)
+}
 
 const Dashboard: React.FC = () => {
   const { state } = useApp()
   const { user } = state
-  
+
   const [isWorkSessionActive, setIsWorkSessionActive] = React.useState(false)
   const [sessionDuration] = React.useState(0)
 
-  // Buscar dados reais da API ou mocks
-  const { data: dashboardData, loading: dashboardLoading, error: dashboardError } = useDashboardData()
-  const { 
-    transactions: recentTransactions
-  } = useTransactionsData(1, 5) // Últimas 5 transações
+  // Buscar dados reais da API
+  const { data: dashboardData, loading: dashboardLoading, error: dashboardError, refetch: refetchDashboard } = useDashboardData()
+  const { transactions: recentTransactions, loading: transactionsLoading, error: transactionsError } = useRecentTransactions(5)
+  const { categories, loading: categoriesLoading, error: categoriesError } = useCategoriesData()
 
-  // Usar dados da API/mock - estrutura compatível
+  // Usar dados da API - estrutura compatível
   const data = React.useMemo(() => {
     if (dashboardData) {
       return {
@@ -72,7 +79,7 @@ const Dashboard: React.FC = () => {
           weeklyTarget: dashboardData.meta_semanal || 1750,
           weeklyKmTarget: 500,
         },
-        recentTransactions: recentTransactions || [],
+        recentTransactions: [],
         trends: {
           income: dashboardData.tendencia_ganhos || 0,
           expenses: dashboardData.tendencia_gastos || 0,
@@ -91,7 +98,7 @@ const Dashboard: React.FC = () => {
       recentTransactions: [],
       trends: { income: 0, expenses: 0, rides: 0 }
     }
-  }, [dashboardData, user, recentTransactions])
+  }, [dashboardData, user])
 
   // Loading state
   if (dashboardLoading) {
@@ -122,13 +129,6 @@ const Dashboard: React.FC = () => {
   // Calcular progresso das metas
   const dailyProgress = (data.today.income / data.goals.dailyTarget) * 100
   const weeklyProgress = (data.thisWeek.income / data.goals.weeklyTarget) * 100
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value)
-  }
 
   const stats = [
     {
@@ -170,7 +170,8 @@ const Dashboard: React.FC = () => {
   ]
 
   return (
-    <Box sx={{ 
+
+    <Box sx={{
       p: { xs: 1, sm: 2, md: 3 },
       maxWidth: '100%',
       overflow: 'hidden'
@@ -178,21 +179,21 @@ const Dashboard: React.FC = () => {
       {/* Welcome Header */}
       <Box sx={{ mb: { xs: 2, md: 4 } }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-          <Typography 
-            variant="h4" 
-            fontWeight={700} 
-            sx={{ 
+          <Typography
+            variant="h4"
+            fontWeight={700}
+            sx={{
               fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' }
             }}
           >
             Bem-vindo de volta, {data.userName?.split(' ')[0] || 'Usuário'}!
           </Typography>
           <Chip
-            label={getCurrentDataSource() === 'mock' ? 'DADOS MOCK' : 'DADOS REAIS'}
+            label="DADOS REAIS"
             size="small"
-            color={getCurrentDataSource() === 'mock' ? 'warning' : 'success'}
+            color="success"
             variant="outlined"
-            sx={{ 
+            sx={{
               fontWeight: 600,
               fontSize: '0.75rem',
               display: { xs: 'none', sm: 'flex' }
@@ -202,16 +203,11 @@ const Dashboard: React.FC = () => {
         <Typography variant="body1" color="text.secondary">
           Acompanhe seus ganhos em tempo real e gerencie sua jornada
         </Typography>
-        {getCurrentDataSource() === 'mock' && (
-          <Typography variant="body2" color="warning.main" sx={{ mt: 1, fontStyle: 'italic' }}>
-            💡 Exibindo dados simulados. Configure NEXT_PUBLIC_USE_MOCK_DATA=api no .env.local para usar dados reais.
-          </Typography>
-        )}
       </Box>
 
       {/* Quick Stats */}
-      <Box 
-        sx={{ 
+      <Box
+        sx={{
           display: 'grid',
           gridTemplateColumns: {
             xs: '1fr',
@@ -254,15 +250,15 @@ const Dashboard: React.FC = () => {
                     <Icon />
                   </Avatar>
                   <Box sx={{ flexGrow: 1, minWidth: 0 }}>
-                    <Typography 
-                      variant="body2" 
+                    <Typography
+                      variant="body2"
                       color="text.secondary"
                       sx={{ fontSize: { xs: '0.75rem', md: '0.875rem' } }}
                     >
                       {stat.label}
                     </Typography>
-                    <Typography 
-                      variant="h6" 
+                    <Typography
+                      variant="h6"
                       fontWeight={600}
                       sx={{ fontSize: { xs: '1rem', md: '1.25rem' } }}
                     >
@@ -286,8 +282,8 @@ const Dashboard: React.FC = () => {
         })}
       </Box>
 
-      <Box 
-        sx={{ 
+      <Box
+        sx={{
           display: 'grid',
           gridTemplateColumns: {
             xs: '1fr',
@@ -313,7 +309,7 @@ const Dashboard: React.FC = () => {
               <Typography variant="body2" sx={{ opacity: 0.8, mb: 3 }}>
                 {isWorkSessionActive ? 'Sessão ativa' : 'Pronto para trabalhar?'}
               </Typography>
-              
+
               {isWorkSessionActive ? (
                 <Box sx={{ textAlign: 'center', mb: 3 }}>
                   <Typography variant="h3" fontWeight={700}>
@@ -354,185 +350,185 @@ const Dashboard: React.FC = () => {
 
         {/* Goals Progress */}
         <Box>
-        {/* Goals Progress */}
-        <Box>
-          <Card sx={{ height: '100%' }}>
-            <CardContent>
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-                <Typography variant="h6" fontWeight={600}>
-                  Progresso das Metas
-                </Typography>
-                <IconButton size="small">
-                  <Edit />
-                </IconButton>
-              </Box>
-
-              <Box 
-                sx={{ 
-                  display: 'grid',
-                  gridTemplateColumns: {
-                    xs: '1fr',
-                    sm: 'repeat(2, 1fr)'
-                  },
-                  gap: { xs: 2, sm: 3 }
-                }}
-              >
-                {/* Daily Goal */}
-                <Box>
-                  <Box
-                    sx={{
-                      p: { xs: 1.5, sm: 2 },
-                      backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1a2e1a' : '#f0f9f0',
-                      borderRadius: 2,
-                      border: '1px solid',
-                      borderColor: (theme) => theme.palette.mode === 'dark' ? '#2e7d32' : '#4caf50',
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography 
-                        variant="body2" 
-                        fontWeight={600}
-                        sx={{
-                          color: (theme) => theme.palette.mode === 'dark' ? '#81c784' : '#2e7d32'
-                        }}
-                      >
-                        Meta Diária
-                      </Typography>
-                      <Typography 
-                        variant="body2" 
-                        fontWeight={600}
-                        sx={{
-                          color: (theme) => theme.palette.mode === 'dark' ? '#81c784' : '#2e7d32'
-                        }}
-                      >
-                        {Math.round(dailyProgress)}%
-                      </Typography>
-                    </Box>
-                    
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      mb: 2,
-                      flexWrap: { xs: 'wrap', sm: 'nowrap' },
-                      gap: { xs: 1, sm: 0 }
-                    }}>
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          fontSize: { xs: '1rem', sm: '1.25rem' },
-                          color: (theme) => theme.palette.mode === 'dark' ? '#c8e6c9' : '#1b5e20'
-                        }}
-                      >
-                        {formatCurrency(data.today.income)}
-                      </Typography>
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          fontSize: { xs: '1rem', sm: '1.25rem' },
-                          color: (theme) => theme.palette.mode === 'dark' ? '#c8e6c9' : '#1b5e20'
-                        }}
-                      >
-                        {formatCurrency(data.goals.dailyTarget)}
-                      </Typography>
-                    </Box>
-                    
-                    <LinearProgress
-                      variant="determinate"
-                      value={Math.min(dailyProgress, 100)}
-                      sx={{
-                        height: 8,
-                        borderRadius: 4,
-                        backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#2e4e2e' : '#e8f5e8',
-                        '& .MuiLinearProgress-bar': {
-                          backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
-                        },
-                      }}
-                    />
-                  </Box>
+          {/* Goals Progress */}
+          <Box>
+            <Card sx={{ height: '100%' }}>
+              <CardContent>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+                  <Typography variant="h6" fontWeight={600}>
+                    Progresso das Metas
+                  </Typography>
+                  <IconButton size="small">
+                    <Edit />
+                  </IconButton>
                 </Box>
 
-                {/* Weekly Goal */}
-                <Box>
-                  <Box
-                    sx={{
-                      p: { xs: 1.5, sm: 2 },
-                      backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1a237e' : '#e3f2fd',
-                      borderRadius: 2,
-                      border: '1px solid',
-                      borderColor: (theme) => theme.palette.mode === 'dark' ? '#3f51b5' : '#1976d2',
-                    }}
-                  >
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                      <Typography 
-                        variant="body2" 
-                        fontWeight={600}
-                        sx={{
-                          color: (theme) => theme.palette.mode === 'dark' ? '#9fa8da' : '#1565c0'
-                        }}
-                      >
-                        Meta Semanal
-                      </Typography>
-                      <Typography 
-                        variant="body2" 
-                        fontWeight={600}
-                        sx={{
-                          color: (theme) => theme.palette.mode === 'dark' ? '#9fa8da' : '#1565c0'
-                        }}
-                      >
-                        {Math.round(weeklyProgress)}%
-                      </Typography>
-                    </Box>
-                    
-                    <Box sx={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      mb: 2,
-                      flexWrap: { xs: 'wrap', sm: 'nowrap' },
-                      gap: { xs: 1, sm: 0 }
-                    }}>
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          fontSize: { xs: '1rem', sm: '1.25rem' },
-                          color: (theme) => theme.palette.mode === 'dark' ? '#c5cae9' : '#0d47a1'
-                        }}
-                      >
-                        {formatCurrency(data.thisWeek.income)}
-                      </Typography>
-                      <Typography 
-                        variant="h6" 
-                        sx={{ 
-                          fontSize: { xs: '1rem', sm: '1.25rem' },
-                          color: (theme) => theme.palette.mode === 'dark' ? '#c5cae9' : '#0d47a1'
-                        }}
-                      >
-                        {formatCurrency(data.goals.weeklyTarget)}
-                      </Typography>
-                    </Box>
-                    
-                    <LinearProgress
-                      variant="determinate"
-                      value={Math.min(weeklyProgress, 100)}
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gridTemplateColumns: {
+                      xs: '1fr',
+                      sm: 'repeat(2, 1fr)'
+                    },
+                    gap: { xs: 2, sm: 3 }
+                  }}
+                >
+                  {/* Daily Goal */}
+                  <Box>
+                    <Box
                       sx={{
-                        height: 8,
-                        borderRadius: 4,
-                        backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#283593' : '#e1f5fe',
-                        '& .MuiLinearProgress-bar': {
-                          backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#3f51b5' : '#1976d2',
-                        },
+                        p: { xs: 1.5, sm: 2 },
+                        backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1a2e1a' : '#f0f9f0',
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: (theme) => theme.palette.mode === 'dark' ? '#2e7d32' : '#4caf50',
                       }}
-                    />
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          sx={{
+                            color: (theme) => theme.palette.mode === 'dark' ? '#81c784' : '#2e7d32'
+                          }}
+                        >
+                          Meta Diária
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          sx={{
+                            color: (theme) => theme.palette.mode === 'dark' ? '#81c784' : '#2e7d32'
+                          }}
+                        >
+                          {Math.round(dailyProgress)}%
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        mb: 2,
+                        flexWrap: { xs: 'wrap', sm: 'nowrap' },
+                        gap: { xs: 1, sm: 0 }
+                      }}>
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            fontSize: { xs: '1rem', sm: '1.25rem' },
+                            color: (theme) => theme.palette.mode === 'dark' ? '#c8e6c9' : '#1b5e20'
+                          }}
+                        >
+                          {formatCurrency(data.today.income)}
+                        </Typography>
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            fontSize: { xs: '1rem', sm: '1.25rem' },
+                            color: (theme) => theme.palette.mode === 'dark' ? '#c8e6c9' : '#1b5e20'
+                          }}
+                        >
+                          {formatCurrency(data.goals.dailyTarget)}
+                        </Typography>
+                      </Box>
+
+                      <LinearProgress
+                        variant="determinate"
+                        value={Math.min(dailyProgress, 100)}
+                        sx={{
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#2e4e2e' : '#e8f5e8',
+                          '& .MuiLinearProgress-bar': {
+                            backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#4caf50' : '#2e7d32',
+                          },
+                        }}
+                      />
+                    </Box>
+                  </Box>
+
+                  {/* Weekly Goal */}
+                  <Box>
+                    <Box
+                      sx={{
+                        p: { xs: 1.5, sm: 2 },
+                        backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#1a237e' : '#e3f2fd',
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: (theme) => theme.palette.mode === 'dark' ? '#3f51b5' : '#1976d2',
+                      }}
+                    >
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          sx={{
+                            color: (theme) => theme.palette.mode === 'dark' ? '#9fa8da' : '#1565c0'
+                          }}
+                        >
+                          Meta Semanal
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          fontWeight={600}
+                          sx={{
+                            color: (theme) => theme.palette.mode === 'dark' ? '#9fa8da' : '#1565c0'
+                          }}
+                        >
+                          {Math.round(weeklyProgress)}%
+                        </Typography>
+                      </Box>
+
+                      <Box sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        mb: 2,
+                        flexWrap: { xs: 'wrap', sm: 'nowrap' },
+                        gap: { xs: 1, sm: 0 }
+                      }}>
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            fontSize: { xs: '1rem', sm: '1.25rem' },
+                            color: (theme) => theme.palette.mode === 'dark' ? '#c5cae9' : '#0d47a1'
+                          }}
+                        >
+                          {formatCurrency(data.thisWeek.income)}
+                        </Typography>
+                        <Typography
+                          variant="h6"
+                          sx={{
+                            fontSize: { xs: '1rem', sm: '1.25rem' },
+                            color: (theme) => theme.palette.mode === 'dark' ? '#c5cae9' : '#0d47a1'
+                          }}
+                        >
+                          {formatCurrency(data.goals.weeklyTarget)}
+                        </Typography>
+                      </Box>
+
+                      <LinearProgress
+                        variant="determinate"
+                        value={Math.min(weeklyProgress, 100)}
+                        sx={{
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#283593' : '#e1f5fe',
+                          '& .MuiLinearProgress-bar': {
+                            backgroundColor: (theme) => theme.palette.mode === 'dark' ? '#3f51b5' : '#1976d2',
+                          },
+                        }}
+                      />
+                    </Box>
                   </Box>
                 </Box>
-              </Box>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </Box>
         </Box>
-      </Box>
 
-      {/* Recent Transactions */}
-      <Box>
-        <Card>
+        {/* Recent Transactions */}
+        <Box>
+          <Card>
             <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
                 <Typography variant="h6" fontWeight={600}>
@@ -556,59 +552,18 @@ const Dashboard: React.FC = () => {
                 </Box>
               </Box>
 
-              {data.recentTransactions.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <AttachMoney sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
-                  <Typography variant="h6" color="text.secondary" gutterBottom>
-                    Nenhuma transação ainda
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    Registre sua primeira transação para ver as atividades aqui
-                  </Typography>
-                  <Button variant="contained" startIcon={<AddCircle />}>
-                    Adicionar Transação
-                  </Button>
-                </Box>
-              ) : (
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  {data.recentTransactions.map((transaction: Transaction, index: number) => (
-                    <Box key={transaction.id}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar
-                          sx={{
-                            backgroundColor: transaction.tipo === 'receita' ? 'success.light' : 'error.light',
-                            color: transaction.tipo === 'receita' ? 'success.dark' : 'error.dark',
-                          }}
-                        >
-                          {transaction.tipo === 'receita' ? <TrendingUp /> : <TrendingDown />}
-                        </Avatar>
-                        
-                        <Box sx={{ flexGrow: 1 }}>
-                          <Typography variant="body1" fontWeight={500}>
-                            {transaction.descricao}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {transaction.nome_categoria} • {new Date(transaction.data).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                          </Typography>
-                        </Box>
-                        
-                        <Typography
-                          variant="h6"
-                          fontWeight={600}
-                          color={transaction.tipo === 'receita' ? 'success.main' : 'error.main'}
-                        >
-                          {transaction.tipo === 'receita' ? '+' : '-'}
-                          {formatCurrency(transaction.valor)}
-                        </Typography>
-                      </Box>
-                      
-                      {index < data.recentTransactions.length - 1 && (
-                        <Divider sx={{ mt: 2 }} />
-                      )}
-                    </Box>
-                  ))}
-                </Box>
-              )}
+              <Box sx={{ textAlign: 'center', py: 4 }}>
+                <AttachMoney sx={{ fontSize: 64, color: 'text.disabled', mb: 2 }} />
+                <Typography variant="h6" color="text.secondary" gutterBottom>
+                  Transações em desenvolvimento
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                  Esta seção mostrará suas transações recentes em breve
+                </Typography>
+                <Button variant="contained" startIcon={<AddCircle />}>
+                  Adicionar Transação
+                </Button>
+              </Box>
             </CardContent>
           </Card>
         </Box>

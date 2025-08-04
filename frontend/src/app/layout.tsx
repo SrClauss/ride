@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { AppProvider } from "../store/context";
 import { ThemeProvider } from "../components/theme/ThemeProvider";
 import MainLayout from "../components/layout/MainLayout";
+import AuthWrapper from "../components/auth/AuthWrapper";
 import { NoSSR } from "../components/common/NoSSR";
 import "./globals.css";
 import "@/lib/fontawesome";
@@ -36,13 +37,15 @@ export default function RootLayout({
             </div>
           }
         >
-          <AppProvider>
-            <ThemeProvider>
-              <MainLayout>
-                {children}
-              </MainLayout>
-            </ThemeProvider>
-          </AppProvider>
+          <AuthWrapper>
+            <AppProvider>
+              <ThemeProvider>
+                <MainLayout>
+                  {children}
+                </MainLayout>
+              </ThemeProvider>
+            </AppProvider>
+          </AuthWrapper>
         </NoSSR>
       </body>
     </html>

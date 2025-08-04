@@ -21,6 +21,8 @@ from api.transactions import router as transactions_router
 from api.payments import router as payments_router
 from api.webhooks import router as webhooks_router
 from api.goals import router as goals_router
+from api.dashboard import router as dashboard_router
+from api.demo import router as demo_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -123,12 +125,17 @@ async def log_requests(request: Request, call_next):
     return response
 
 # Rotas da API
-app.include_router(auth_router)
-app.include_router(categories_router)
-app.include_router(transactions_router)
-app.include_router(payments_router)
-app.include_router(webhooks_router)
-app.include_router(goals_router)
+app.include_router(auth_router, prefix="/api")
+app.include_router(categories_router, prefix="/api")
+app.include_router(transactions_router, prefix="/api")
+app.include_router(payments_router, prefix="/api")
+app.include_router(webhooks_router, prefix="/api")
+app.include_router(goals_router, prefix="/api")
+app.include_router(dashboard_router, prefix="/api")
+
+# Router demo (apenas em desenvolvimento)
+if settings.DEBUG:
+    app.include_router(demo_router, prefix="/api")
 
 # Rota de health check
 @app.get("/health")
@@ -163,5 +170,8 @@ if __name__ == "__main__":
         "main:app",
         host="0.0.0.0",
         port=8000,
-        reload=settings.DEBUG
+        reload=settings.DEBUG,
+        log_level="info",  # Reduz logs de debug
+        access_log=False,  # Remove logs de acesso HTTP
+        reload_excludes=["logs/*", "__pycache__/*", "*.pyc", "*.log"]  # Ignora arquivos que mudam frequentemente
     )

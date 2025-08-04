@@ -110,12 +110,20 @@ def refresh_token(token_data: TokenRefresh, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro interno do servidor")
 
 @router.get("/me", response_model=dict)
-def get_current_user_info(current_user = Depends(get_current_user)):
+def get_current_user_info(
+    current_user = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
     """Obtém informações do usuário atual"""
-    return ResponseFormatter.success(
-        data=current_user.para_dict(),
-        message="Informações do usuário obtidas com sucesso"
-    )
+    try:
+        profile = AuthService.get_user_profile_with_totals(db, current_user.id)
+        return ResponseFormatter.success(
+            data=profile,
+            message="Informações do usuário obtidas com sucesso"
+        )
+    except Exception as e:
+        logger.error(f"Erro ao obter perfil do usuário: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Erro interno do servidor")
 
 @router.put("/me", response_model=dict)
 def update_profile(
@@ -129,11 +137,16 @@ def update_profile(
             db=db,
             user=current_user,
             nome_completo=user_data.nome_completo,
-            telefone=user_data.telefone
+            telefone=user_data.telefone,
+            veiculo=user_data.veiculo,
+            data_inicio_atividade=user_data.data_inicio_atividade
         )
         
+        # Retornar perfil com totais calculados
+        profile = AuthService.get_user_profile_with_totals(db, updated_user.id)
+        
         return ResponseFormatter.success(
-            data=updated_user.para_dict(),
+            data=profile,
             message="Perfil atualizado com sucesso"
         )
         

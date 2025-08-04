@@ -155,3 +155,35 @@ class AuthService:
             db.rollback()
             logger.error(f"Erro ao alterar senha: {str(e)}")
             raise ValidationError("Erro ao alterar senha")
+
+    @staticmethod
+    def get_user_profile_with_totals(db: Session, user_id: str) -> dict:
+        """Retorna perfil do usuário com totais calculados"""
+        from sqlalchemy import func
+        from models import Transacao
+        
+        # Buscar usuário
+        user = db.query(Usuario).filter(Usuario.id == user_id).first()
+        if not user:
+            raise ValidationError("Usuário não encontrado")
+        
+        # Calcular total gasto (despesas)
+        total_spent = db.query(func.coalesce(func.sum(Transacao.valor), 0.0)).filter(
+            Transacao.id_usuario == user_id,
+            Transacao.tipo == 'despesa'
+        ).scalar() or 0.0
+        
+        # Calcular total ganho (receitas)
+        total_earned = db.query(func.coalesce(func.sum(Transacao.valor), 0.0)).filter(
+            Transacao.id_usuario == user_id,
+            Transacao.tipo == 'receita'
+        ).scalar() or 0.0
+        
+        # Retornar perfil completo
+        profile = user.para_dict()
+        profile.update({
+            'total_spent': float(total_spent),
+            'total_earned': float(total_earned)
+        })
+        
+        return profile

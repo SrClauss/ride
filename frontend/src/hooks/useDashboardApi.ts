@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { dashboardDataService } from '../services/dataService'
+import { dashboardService } from '../services/dataService'
 
 export interface DashboardData {
   ganhos_hoje: number
@@ -15,8 +15,8 @@ export interface DashboardData {
   corridas_semana: number
   horas_semana: number
   
-  meta_diaria: number
-  meta_semanal: number
+  meta_diaria: number | null
+  meta_semanal: number | null
   
   tendencia_ganhos: number
   tendencia_gastos: number
@@ -28,22 +28,29 @@ export const useDashboardData = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        const result = await dashboardDataService.getAllDashboardData()
-        setData(result.dashboardData)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Erro ao carregar dados do dashboard')
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      console.log('🔄 Hook: Fetching dashboard data...')
+      const dashboardData = await dashboardService.getDashboardData()
+      setData(dashboardData)
+      console.log('✅ Hook: Dashboard data loaded successfully')
+    } catch (err) {
+      console.error('❌ Hook: Error loading dashboard data:', err)
+      setError(err instanceof Error ? err.message : 'Erro ao carregar dados do dashboard')
+    } finally {
+      setLoading(false)
     }
+  }
 
+  useEffect(() => {
     fetchData()
   }, [])
 
-  return { data, loading, error }
+  const refetch = () => {
+    fetchData()
+  }
+
+  return { data, loading, error, refetch }
 }

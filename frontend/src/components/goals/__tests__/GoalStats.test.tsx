@@ -143,7 +143,7 @@ describe('GoalStats', () => {
 
     expect(screen.getByText('Taxa de Conclusão')).toBeInTheDocument();
     // Com 1 meta concluída de 4 total = 25%
-    expect(screen.getByText('25%')).toBeInTheDocument();
+    expect(screen.getByText('25.0%')).toBeInTheDocument();
   });
 
   it('deve exibir estatísticas com uma meta', () => {
@@ -155,7 +155,7 @@ describe('GoalStats', () => {
       </TestWrapper>
     );
 
-    expect(screen.getByText('1')).toBeInTheDocument(); // Total
+    expect(screen.getAllByText('1')).toHaveLength(2); // Total e Ativas
     expect(screen.getByText('Total de Metas')).toBeInTheDocument();
   });
 
@@ -211,7 +211,7 @@ describe('GoalStats', () => {
     expect(screen.getByText('2')).toBeInTheDocument();
     
     // Taxa de conclusão: 50% (1 de 2)
-    expect(screen.getByText('50%')).toBeInTheDocument();
+    expect(screen.getByText('50.0%')).toBeInTheDocument();
   });
 
   it('deve tratar metas com valor alvo zero', () => {

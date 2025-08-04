@@ -3,7 +3,7 @@ Schemas Pydantic para autenticação
 """
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, date
 
 class UserRegister(BaseModel):
     """Schema para registro de usuário"""
@@ -41,11 +41,16 @@ class UserProfile(BaseModel):
     email: str
     nome_completo: Optional[str]
     telefone: Optional[str]
+    veiculo: Optional[str]
+    data_inicio_atividade: Optional[datetime]
     eh_pago: bool
     status_pagamento: str
     tipo_assinatura: str
     trial_termina_em: Optional[datetime]
     criado_em: datetime
+    # Campos calculados
+    total_spent: Optional[float] = 0.0
+    total_earned: Optional[float] = 0.0
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -53,3 +58,5 @@ class UserUpdate(BaseModel):
     """Schema para atualização de perfil"""
     nome_completo: Optional[str] = Field(None, max_length=100)
     telefone: Optional[str] = Field(None, max_length=20)
+    veiculo: Optional[str] = Field(None, max_length=200)
+    data_inicio_atividade: Optional[datetime] = Field(None)

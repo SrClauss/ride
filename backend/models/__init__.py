@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy import Column, String, Integer, Float, Boolean, DateTime, Date, Text, ForeignKey
 from sqlalchemy.orm import declarative_base, relationship, validates
 from sqlalchemy.sql import func
 from datetime import datetime, timezone
@@ -22,6 +22,10 @@ class Usuario(Base):
     senha = Column(String(255), nullable=False)
     nome_completo = Column(String(100))
     telefone = Column(String(20))
+    
+    # Campos específicos do motorista
+    veiculo = Column(String(200))  # Informações do veículo
+    data_inicio_atividade = Column(Date)  # Data de início como motorista
     
     # Campos de pagamento
     eh_pago = Column(Boolean, default=False)
@@ -74,6 +78,8 @@ class Usuario(Base):
             'email': self.email,
             'nome_completo': self.nome_completo,
             'telefone': self.telefone,
+            'veiculo': self.veiculo,
+            'data_inicio_atividade': self.data_inicio_atividade.isoformat() if self.data_inicio_atividade else None,
             'eh_pago': self.eh_pago,
             'status_pagamento': self.status_pagamento,
             'tipo_assinatura': self.tipo_assinatura,
@@ -339,7 +345,8 @@ class Meta(Base):
     
     @validates('categoria')
     def validar_categoria(self, key, categoria):
-        categorias_validas = ['receita', 'corridas', 'horas', 'eficiencia', 'despesas']
+        # Categorias alinhadas com o frontend
+        categorias_validas = ['emergency', 'investment', 'purchase', 'travel', 'education', 'health', 'other']
         if categoria not in categorias_validas:
             raise ValueError(f"Categoria deve ser uma de: {', '.join(categorias_validas)}")
         return categoria
@@ -366,25 +373,39 @@ class Meta(Base):
         self.eh_concluida = True
         self.concluida_em = datetime.now(timezone.utc)
     
+    @property
+    def status(self):
+        """Converte status booleanos para enum do frontend"""
+        if self.eh_concluida:
+            return "completed"
+        elif self.eh_ativa:
+            return "active"
+        else:
+            return "paused"
+    
     def para_dict(self):
         return {
             'id': self.id,
+            'title': self.titulo,  # Mapeamento para frontend
+            'description': self.descricao,
+            'targetValue': self.valor_alvo,  # Mapeamento para frontend
+            'currentValue': self.valor_atual,  # Mapeamento para frontend
+            'deadline': self.data_fim.isoformat() if self.data_fim else None,  # Mapeamento para frontend
+            'category': self.categoria,
+            'status': self.status,  # Usa propriedade que converte para enum
+            'createdAt': self.criado_em.isoformat() if self.criado_em else None,  # Mapeamento para frontend
+            'updatedAt': self.atualizado_em.isoformat() if self.atualizado_em else None,  # Mapeamento para frontend
+            
+            # Campos adicionais do backend
             'id_usuario': self.id_usuario,
-            'titulo': self.titulo,
-            'descricao': self.descricao,
             'tipo': self.tipo,
-            'categoria': self.categoria,
-            'valor_alvo': self.valor_alvo,
-            'valor_atual': self.valor_atual,
             'unidade': self.unidade,
             'data_inicio': self.data_inicio.isoformat() if self.data_inicio else None,
-            'data_fim': self.data_fim.isoformat() if self.data_fim else None,
             'eh_ativa': self.eh_ativa,
             'eh_concluida': self.eh_concluida,
             'concluida_em': self.concluida_em.isoformat() if self.concluida_em else None,
             'porcentagem_progresso': self.calcular_porcentagem_progresso(),
-            'lembrete_ativo': self.lembrete_ativo,
-            'criado_em': self.criado_em.isoformat() if self.criado_em else None
+            'lembrete_ativo': self.lembrete_ativo
         }
 
 
